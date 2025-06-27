@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+python-dotenv
+pydantic
+sqlalchemy
+psycopg2-binary
+redis
+temporalio
+spacy
+transformers
+torch
+pillow
