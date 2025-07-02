@@ -29,7 +29,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             name,
             apiKey,
             sources: sources.join(','),
-            isActive: true
+            isActive: true,
+            user: {
+              connect: {
+                id: session.user.id
+              }
+            }
           }
         });
         res.status(201).json(newAPI);

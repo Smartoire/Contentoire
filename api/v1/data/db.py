@@ -1,9 +1,7 @@
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
 import os
 
-db = SQLAlchemy()
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 basedir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SQLALCHEMY_DATABASE_URL = 'sqlite:///' + os.path.join(basedir, 'contentoire.db')

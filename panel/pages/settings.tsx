@@ -18,6 +18,9 @@ import ShareIcon from '@mui/icons-material/Share';
 export default function SettingsPage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const [settings, setSettings] = useState<any>(null);
+  const [users, setUsers] = useState<any[]>([]);
+  const [openAddDialog, setOpenAddDialog] = useState(false);
 
   const [newSource, setNewSource] = useState({
     id: '',
@@ -52,27 +55,34 @@ export default function SettingsPage() {
     }
   }, [session, isGlobalAdmin, router]);
 
+  if (!settings) return <div>Loading...</div>;
+
   useEffect(() => {
     // Fetch settings configuration from API
     const fetchSettings = async () => {
       try {
         const response = await fetch('/api/settings');
         if (!response.ok) {
-          // Optionally, you can show a user-friendly error message here
-          console.error('Failed to fetch settings:', await response.text());
-          return;
+          throw new Error('Failed to fetch settings');
         }
         const data = await response.json();
         setSettings(data);
+        // Also fetch users if available in the settings
+        if (data.users) {
+          setUsers(data.users);
+        }
       } catch (error) {
-        // More robust error logging
         console.error('Error fetching settings:', error instanceof Error ? error.message : error);
       }
     };
     if (isGlobalAdmin) {
       fetchSettings();
     }
-  }, [isGlobalAdmin]);
+  }, [session, isGlobalAdmin, router]);
+
+  if (!settings) return <div>Loading...</div>;
+
+  // Rest of the component code here...
 
   // Loading state
   if (!session) {

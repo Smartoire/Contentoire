@@ -1,12 +1,9 @@
 const path = require('path');
-const isProd = process.env.NODE_ENV === 'production';
-
-/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  basePath: isProd ? '/contentoire' : '',
-  assetPrefix: isProd ? '/contentoire/' : '',
-  trailingSlash: true, // optional but often helpful with basePath
+  basePath: '/contentoire',
+  assetPrefix: '/contentoire/',
+  trailingSlash: true,
   env: {
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
   },
@@ -19,7 +16,9 @@ const nextConfig = {
   webpack: (config, { isServer }) => {
     config.resolve.alias['@styles'] = path.join(__dirname, 'styles');
     return config;
-  }
+  },
+  // Handle cross-origin requests
+  allowedDevOrigins: ['gpu.smartoire.com']
 }
 
 module.exports = nextConfig

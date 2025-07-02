@@ -32,4 +32,14 @@ export default class GoogleAuthProvider implements IAuthProvider {
       body: JSON.stringify(settings),
     });
   }
+
+  async authenticate(params?: any): Promise<any> {
+    // Implement Google OAuth2 authentication logic
+    // This should handle the OAuth2 flow with Google
+    // For now, return a dummy response
+    return {
+      success: false,
+      message: 'Google authentication not implemented yet'
+    };
+  }
 }
