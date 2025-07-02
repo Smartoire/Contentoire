@@ -1,15 +1,9 @@
-# ...existing code from /home/vahid/Projects/Contentoire/api/routes/auth_providers.py...
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 from typing import List
 
-router = APIRouter(prefix="/api/v1/providers/auth")
+from fastapi import APIRouter, HTTPException
+from models.auth_provider import AuthProvider
 
-class AuthProvider(BaseModel):
-    id: str
-    title: str
-    logo: str
-    enabled: bool = True
+router = APIRouter(prefix="/providers/auth")
 
 auth_providers: List[AuthProvider] = []
 

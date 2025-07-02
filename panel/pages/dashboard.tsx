@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { Box, Typography, Button, AppBar, Toolbar, Container, Menu, MenuItem, IconButton } from '@mui/material';
 import { Settings, Person, Menu as MenuIcon } from '@mui/icons-material';
@@ -14,6 +15,11 @@ library.add(faSignOutAlt);
 function Header({ session, router }: { session: any, router: any }) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    console.log('Current path:', pathname);
+  }, [pathname]);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -59,26 +65,35 @@ function Header({ session, router }: { session: any, router: any }) {
 }
 
 export default function Dashboard() {
-  const { data: session, status } = useSession();
+  console.log('Dashboard page mounted');
+  
   const router = useRouter();
+  const pathname = usePathname();
+  const { data: session } = useSession();
+  
+  console.log('Dashboard page - Router:', router);
+  console.log('Dashboard page - Pathname:', pathname);
+  console.log('Dashboard page - Session:', session);
+  console.log('Dashboard page - Base path:', process.env.NEXT_PUBLIC_BASE_PATH || '/contentoire');
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (session === null) {
       if (typeof window !== 'undefined') {
         router.push('/auth/signin');
       }
     }
-  }, [status, router]);
+  }, [session, router]);
 
-  if (status === 'loading') {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Loading...
-        </Typography>
-      </Box>
-    );
-  }
+  // Check if we're on the correct path
+  useEffect(() => {
+    console.log('Dashboard page - useEffect triggered');
+    console.log('Current path:', pathname);
+    
+    if (pathname !== '/contentoire/dashboard') {
+      console.log('Redirecting to correct dashboard path');
+      router.push('/contentoire/dashboard');
+    }
+  }, [pathname, router]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>

@@ -32,4 +32,14 @@ export default class LinkedInAuthProvider implements IAuthProvider {
       body: JSON.stringify(settings),
     });
   }
+
+  async authenticate(params?: any): Promise<any> {
+    // Implement LinkedIn OAuth2 authentication logic
+    // This should handle the OAuth2 flow with LinkedIn
+    // For now, return a dummy response
+    return {
+      success: false,
+      message: 'LinkedIn authentication not implemented yet'
+    };
+  }
 }

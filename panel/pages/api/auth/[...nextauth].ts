@@ -33,47 +33,73 @@ declare module "next-auth/providers/credentials" {
 
 export default NextAuth({
   providers: [
-    process.env.GOOGLE_CLIENT_ID && GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    process.env.FACEBOOK_CLIENT_ID && FacebookProvider({
-      clientId: process.env.FACEBOOK_CLIENT_ID!,
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
-    }),
-    process.env.APPLE_CLIENT_ID && AppleProvider({
-      clientId: process.env.APPLE_CLIENT_ID!,
-      clientSecret: process.env.APPLE_CLIENT_SECRET!,
-    }),
-    process.env.TWITTER_CLIENT_ID && TwitterProvider({
-      clientId: process.env.TWITTER_CLIENT_ID!,
-      clientSecret: process.env.TWITTER_CLIENT_SECRET!,
-    }),
-    process.env.LINKEDIN_CLIENT_ID && LinkedInProvider({
-      clientId: process.env.LINKEDIN_CLIENT_ID!,
-      clientSecret: process.env.LINKEDIN_CLIENT_SECRET!,
-    }),
-    CredentialsProvider({
-      id: "credentials",
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
-      },
-      async authorize(credentials) {
-        if (credentials?.email === 'test@example.com' && credentials?.password === 'test123') {
-          return {
-            id: 'test-user',
-            name: 'Test User',
-            email: credentials?.email as string,
-            image: 'https://ui-avatars.com/api/?name=Test+User&background=random',
-            role: 'global_admin'
-          };
-        }
-        return null;
-      },
-    }),
-  ].filter(Boolean) as any[],
+    process.env.GOOGLE_CLIENT_ID && {
+      name: 'Google',
+      provider: GoogleProvider({
+        clientId: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      })
+    },
+    process.env.FACEBOOK_CLIENT_ID && {
+      name: 'Facebook',
+      provider: FacebookProvider({
+        clientId: process.env.FACEBOOK_CLIENT_ID!,
+        clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+      })
+    },
+    process.env.APPLE_CLIENT_ID && {
+      name: 'Apple',
+      provider: AppleProvider({
+        clientId: process.env.APPLE_CLIENT_ID!,
+        clientSecret: process.env.APPLE_CLIENT_SECRET!,
+      })
+    },
+    process.env.TWITTER_CLIENT_ID && {
+      name: 'Twitter',
+      provider: TwitterProvider({
+        clientId: process.env.TWITTER_CLIENT_ID!,
+        clientSecret: process.env.TWITTER_CLIENT_SECRET!,
+      })
+    },
+    process.env.LINKEDIN_CLIENT_ID && {
+      name: 'LinkedIn',
+      provider: LinkedInProvider({
+        clientId: process.env.LINKEDIN_CLIENT_ID!,
+        clientSecret: process.env.LINKEDIN_CLIENT_SECRET!,
+      })
+    },
+    {
+      name: 'Credentials',
+      provider: CredentialsProvider({
+        id: "credentials",
+        name: "Credentials",
+        credentials: {
+          email: { label: "Email", type: "email" },
+          password: { label: "Password", type: "password" }
+        },
+        async authorize(credentials) {
+          if (credentials?.email === 'test@example.com' && credentials?.password === 'test123') {
+            return {
+              id: 'test-user',
+              name: 'Test User',
+              email: credentials?.email as string,
+              image: 'https://ui-avatars.com/api/?name=Test+User&background=random',
+              role: 'global_admin'
+            };
+          }
+          return null;
+        },
+      })
+    }
+  ].filter(Boolean as any)
+    .map(p => {
+      if (p) {
+        console.log(`Enabled auth provider: ${p.name}`);
+        return p.provider;
+      }
+      return null;
+    })
+    .filter(Boolean) as any,
   callbacks: {
     async jwt({ token, user }) {
       if (user) {

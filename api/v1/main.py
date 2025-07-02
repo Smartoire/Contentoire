@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.security import OAuth2PasswordBearer
 from job import jobs
-from media import social_medias
 from provider.auth import auth_providers
 from provider.content import content_providers
 from provider.news import news_providers
+from provider.social import social_medias
 from user import auth, users
 
 app = FastAPI(

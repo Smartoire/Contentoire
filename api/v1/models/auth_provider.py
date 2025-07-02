@@ -1,5 +1,6 @@
-from sqlalchemy import Column, String, Boolean
 from data.db import Base
+from sqlalchemy import Boolean, Column, String
+
 
 class AuthProviderDB(Base):
     __tablename__ = "auth_providers"
