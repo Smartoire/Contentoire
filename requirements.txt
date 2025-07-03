@@ -1,8 +1,4 @@
-fastapi
 uvicorn
-python-dotenv
-pydantic
-sqlalchemy
 psycopg2-binary
 redis
 temporalio
@@ -10,3 +6,9 @@ spacy
 transformers
 torch
 pillow
+requests
+python-dotenv
+Flask
+Flask-SQLAlchemy
+Flask-login
+flask.ext
