@@ -201,3 +201,56 @@ input:checked + .slider:before {
   color: #666;
   vertical-align: middle;
 }
+.calendar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.month-view {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 20px;
+}
+.current-month {
+  font-size: 1.5em;
+  font-weight: bold;
+}
+.calendar-header {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.calendar-header h4 {
+    margin: 0;
+    color: #333;
+    font-weight: 600;
+}
+.calendar-grid {
+    border-collapse: collapse;
+    width: 100%;
+}
+.calendar-grid td, .calendar-grid th {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+}
+
+.calendar-grid td.today {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    font-weight: bold;
+    border: 2px solid #1976d2;
+}
+
+.calendar-grid th {
+  background-color: #f8f9fa;
+}
+.management-panel {
+  border: 1px solid #ddd;
+  padding: 20px;
+  margin-top: 20px;
+}
+.relationship-table {
+  width: 100%;
+  margin-top: 20px;
+}

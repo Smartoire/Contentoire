@@ -1,7 +1,7 @@
 from data.db import db
 from extensions import social_media_providers
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
-from models.media_provider import MediaProvider
+from models.provider import MediaProvider
 
 media_provider_bp = Blueprint('media_provider', __name__, url_prefix='/providers/media')
 

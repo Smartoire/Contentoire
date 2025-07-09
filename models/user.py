@@ -4,7 +4,7 @@ from flask_login import UserMixin
 user_permissions = db.Table(
     'user_permissions',
     db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),
-    db.Column('permission_id', db.Integer, db.ForeignKey('permission.id'), primary_key=True)
+    db.Column('permission_id', db.Integer, db.ForeignKey('permissions.id'), primary_key=True)
 )
 
 class User(db.Model, UserMixin):
@@ -24,6 +24,7 @@ class User(db.Model, UserMixin):
     comments = db.Column(db.String, nullable=True)
 
 class Permission(db.Model):
+    __tablename__ = "permissions"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True, nullable=False)
     users = db.relationship('User', secondary=user_permissions, back_populates='permissions')
