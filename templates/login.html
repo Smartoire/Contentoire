@@ -44,21 +44,9 @@
   <div class="mt-4 text-center">
     <div class="mb-2 text-muted">Or login with</div>
     {% for provider in enabled_providers %}
-        {% if provider == 'google' %}
-          <a href="{{ url_for('google.oauth_login_google') }}" class="btn btn-outline-secondary mx-1" title="Login with Google">
-            <i class="fab fa-google"></i>
+          <a href="{{ url_for(provider + '.login') }}" class="btn btn-outline-secondary mx-1" title="Login with {{provider | capitalize}}">
+            <i class="fab fa-{{provider}}"></i>
           </a>
-        {% elif provider == 'facebook' %}
-          <i class="fab fa-facebook"></i>
-        {% elif provider == 'apple' %}
-          <i class="fab fa-apple"></i>
-        {% elif provider == 'twitter' %}
-          <i class="fab fa-twitter"></i>
-        {% elif provider == 'linkedin' %}
-          <i class="fab fa-linkedin"></i>
-        {% else %}
-          {{ provider|capitalize }}
-        {% endif %}
     {% endfor %}
   </div>
 {% endif %}
