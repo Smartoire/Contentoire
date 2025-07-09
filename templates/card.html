@@ -7,8 +7,8 @@
          data-bs-target="#providerModal"
          data-provider-id="{{ card.id }}"
          data-provider-name="{{ card.title }}"
-         data-provider-logo="{{ card.logo }} "
-         data-provider-options="{{ card.options }}">
+         data-provider-logo="{{ card.logo }}"
+         data-provider-options='{{ card.options | tojson }}'>
         <i class="fa fa-edit"></i>
       </a>
     </div>

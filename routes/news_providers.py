@@ -1,6 +1,6 @@
 from data.db import db
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
-from models.provider import NewsProvider, SearchKeyword, KeywordNewsProvider
+from models.provider import NewsProvider, SearchKeyword, keyword_news_providers
 
 news_provider_bp = Blueprint('news_provider', __name__, url_prefix='/providers/news')
 
@@ -81,16 +81,18 @@ def update_provider_keywords(provider_id):
     selected_keywords = request.form.getlist('keywords[]')
     
     # Clear existing relationships
-    KeywordNewsProvider.query.filter_by(news_provider_id=provider_id).delete()
+    db.session.query(keyword_news_providers).filter_by(news_provider_id=provider_id).delete()
     
     # Create new relationships
     for keyword in selected_keywords:
         keyword_obj = SearchKeyword.query.filter_by(keyword=keyword).first()
         if keyword_obj:
-            db.session.add(KeywordNewsProvider(
-                news_provider_id=provider_id,
-                keyword_id=keyword_obj.id
-            ))
+            db.session.execute(
+                keyword_news_providers.insert().values(
+                    news_provider_id=provider_id,
+                    keyword_id=keyword_obj.id
+                )
+            )
     
     db.session.commit()
     flash('Keywords updated successfully', 'success')
