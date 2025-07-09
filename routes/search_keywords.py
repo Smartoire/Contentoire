@@ -1,6 +1,6 @@
 from data.db import db
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
-from models.provider import SearchKeyword
+from models.provider import SearchKeyword, NewsProvider
 
 keywords_bp = Blueprint('keywords', __name__, url_prefix='/providers/keywords')
 
@@ -71,3 +71,24 @@ def delete_keyword(keyword_id):
     db.session.commit()
     flash('Keyword deleted successfully', 'success')
     return redirect(url_for('keywords.dashboard'))
+
+# Get news providers related to a keyword
+@keywords_bp.route('/news/<int:news_id>', methods=['GET'])
+def news_providers(news_id):
+    news_provider = NewsProvider.query.get_or_404(news_id)
+    related_keyword_ids = {keyword.id for keyword in news_provider.keywords}
+    
+    # Get all keywords and check if they're related to this news provider
+    all_keywords = SearchKeyword.query.all()
+    
+    return {
+        'keywords': [
+            {
+                'id': keyword.id,
+                'keyword': keyword.keyword,
+                'assigned': keyword.id in related_keyword_ids
+            }
+            for keyword in all_keywords
+        ]
+    }
+
