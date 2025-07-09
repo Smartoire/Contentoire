@@ -1,0 +1,31 @@
+<div class="card position-relative">
+  <div class="card-header">
+    <h2 class="card-title">{{ card.title }}</h2>
+    <div class="card-edit">
+      <a href="#"
+         data-bs-toggle="modal"
+         data-bs-target="#providerModal"
+         data-provider-id="{{ card.id }}"
+         data-provider-name="{{ card.title }}"
+         data-provider-logo="{{ card.logo }} "
+         data-provider-options="{{ card.options }}">
+        <i class="fa fa-edit"></i>
+      </a>
+    </div>
+  </div>
+  <div class="card-body">
+    {% if card.logo.startswith('http') %}
+      <img src="{{ card.logo }}"
+           alt="Logo"
+           class="card-logo-large mx-auto d-block">
+    {% else %}
+      <i class="fa-7x {{ card.logo }}" class="card-logo-large mx-auto d-block"></i>
+    {% endif %}
+    <div class="card-enable card-switch-bottom">
+      <label class="switch switch-small">
+        <input type="checkbox" id="enable" {% if card.enabled %}checked{% endif %}>
+        <span class="slider round"></span>
+      </label>
+    </div>
+  </div>
+</div>

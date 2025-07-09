@@ -1,8 +1,9 @@
 import os
+import time
 
 from data.db import db
-from extensions import login_manager
-from flask import Flask
+from extensions import login_manager, oauth
+from flask import Flask, session
 from flask_migrate import Migrate
 
 migrate = Migrate()
@@ -13,6 +14,8 @@ def create_app():
 
     login_manager.login_view = 'auth.login'
     login_manager.init_app(app)
+
+    oauth.init_app(app)
 
     basedir = os.path.dirname(os.path.abspath(__file__))
     # Configure SQLite database
@@ -46,6 +49,14 @@ def create_app():
     return app
 
 app = create_app()
+
+@app.before_request
+def before_request():
+    if (token := (s := session).get('google_oauth_token')):
+        print("Token expiring in", token['expires_at']-time.time())
+        if time.time() >= token['expires_at']:
+            print("Token expired, removing from session")
+            del s['google_oauth_token']
 
 if __name__ == "__main__":
     context = ('../certs/gpu.pem', '../certs/gpu-key.pem')
