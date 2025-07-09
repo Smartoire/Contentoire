@@ -1,7 +1,6 @@
 from data.db import db
-from extensions import social_media_providers
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
-from models.search_keyword import SearchKeyword
+from models.provider import SearchKeyword
 
 keywords_bp = Blueprint('keywords', __name__, url_prefix='/providers/keywords')
 
@@ -13,7 +12,7 @@ def dashboard():
     for keyword in keywords:
         card = {
             'id': keyword.id,
-            'logo': 'fab fa-keyword',
+            'logo': 'fa fa-tag',
             'title': keyword.keyword,
             'enabled':  keyword.enabled,
             'options': {
@@ -25,11 +24,11 @@ def dashboard():
             }
         }
         cards.append(card)
-    return render_template('media_providers.html', cards=cards, social_media_providers=social_media_providers)
+    return render_template('search_keywords.html', cards=cards)
 
 # Create a new media provider
 @keywords_bp.route('/', methods=['POST'])
-def create_media_provider():
+def add_keyword():
     # Use request.form for HTML form submissions
     search_keyword = request.form.get('search_keyword')
     category = request.form.get('category')
