@@ -12,3 +12,8 @@ Flask
 Flask-SQLAlchemy
 Flask-login
 flask.ext
+worldnewsapi
+usermixin
+authlib
+flask-dance
+flask-oauthlib

@@ -21,6 +21,14 @@
     {% else %}
       <i class="fa-7x {{ card.logo }}" class="card-logo-large mx-auto d-block"></i>
     {% endif %}
+    <div class="card-keywords">
+      <a href="#"
+         data-bs-toggle="modal"
+         data-bs-target="#keywordsModal"
+         data-provider-id="{{ card.id }}">
+        <i class="fa fa-tags"></i>
+      </a>
+    </div>
     <div class="card-enable card-switch-bottom">
       <label class="switch switch-small">
         <input type="checkbox" id="enable" {% if card.enabled %}checked{% endif %}>
