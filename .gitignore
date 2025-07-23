@@ -43,6 +43,7 @@ node_modules/
 .vscode/
 *.swp
 *.swo
+.eslintrc.json
 
 # Logs
 *.log
@@ -73,24 +74,9 @@ logs/
 *.log
 logs/
 
-# Local development
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Database
-*.db
-*.sqlite3
-
 # Temporal
 .temporal/
 .temporalio/
-
-
-# dependencies
-node_modules/
 
 # Expo
 .expo/
