@@ -5,6 +5,7 @@ from data.db import db
 from extensions import login_manager, oauth
 from flask import Flask, session
 from flask_migrate import Migrate
+from models.news import News
 
 migrate = Migrate()
 
@@ -20,7 +21,7 @@ def create_app():
     basedir = os.path.dirname(os.path.abspath(__file__))
     # Configure SQLite database
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'data/contentoire.db')
-    print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+    # print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
@@ -45,7 +46,7 @@ def create_app():
         for rule in app.url_map.iter_rules():
             print(f"Route: {rule.rule}, Endpoint: {rule.endpoint}")
 
-    check_blueprints()
+    # check_blueprints()
     return app
 
 app = create_app()

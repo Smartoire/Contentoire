@@ -130,6 +130,13 @@ nav ul li a {
   z-index: 2;
   padding: 0;
 }
+.card-keywords {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  z-index: 2;
+  padding: 0;
+}
 
 /* Toggle Switch Styles */
 .switch {
