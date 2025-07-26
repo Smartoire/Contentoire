@@ -1,24 +1,14 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet, TouchableOpacity } from 'react-native';
-import { auth } from '@/config/firebase';
-import { router } from 'expo-router';
+import { Platform, StyleSheet } from 'react-native';
 
-import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import { TouchableOpacity } from 'react-native';
+import { HelloWave } from '@/components/HelloWave';
 
-export default function HomeScreen() {
-  const handleSignOut = async () => {
-    try {
-      await auth.signOut();
-      router.replace('/login');
-    } catch (error) {
-      console.error('Error signing out: ', error);
-    }
-  };
-
-
+export default function TabTwoScreen() {
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -29,12 +19,12 @@ export default function HomeScreen() {
         />
       }>
       <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
+        <ThemedText type="title">Tab Two!</ThemedText>
         <HelloWave />
       </ThemedView>
       <ThemedView style={styles.stepContainer}>
-        <TouchableOpacity style={styles.button} onPress={handleSignOut}>
-          <ThemedText type="subtitle">Sign Out</ThemedText>
+        <TouchableOpacity style={styles.button}>
+          <ThemedText type="subtitle">Test button</ThemedText>
         </TouchableOpacity>
       </ThemedView>
     </ParallaxScrollView>
@@ -42,6 +32,13 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',

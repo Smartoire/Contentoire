@@ -1,23 +1,21 @@
 {
   "expo": {
-    "name": "contentoire",
+    "name": "Contentoire",
     "slug": "contentoire",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo.png",
     "scheme": "contentoire",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.smartoire.contentoire",
       "googleServicesFile": "./config/GoogleService-Info.plist"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
       "googleServicesFile": "./config/google-services.json",
+      "package": "com.smartoire.contentoire",
       "edgeToEdgeEnabled": true
     },
     "web": {
@@ -27,15 +25,6 @@
     },
     "plugins": [
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
-        }
-      ],
       "expo-web-browser"
     ],
     "experiments": {

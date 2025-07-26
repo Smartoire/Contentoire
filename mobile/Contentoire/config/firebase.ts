@@ -1,6 +1,7 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { initializeAuth, GoogleAuthProvider, Auth } from 'firebase/auth';
+import { initializeAuth, GoogleAuthProvider, Auth, getAuth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { router } from 'expo-router';
 import { getMessaging, isSupported, Messaging, getToken, onMessage } from 'firebase/messaging';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getReactNativePersistence } from '@firebase/auth';
@@ -36,64 +37,35 @@ if (missingConfig.length > 0) {
   throw new Error('Firebase configuration is incomplete. Please check your environment variables.');
 }
 
-export const app = initializeApp(firebaseConfig);
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
-export const db = getFirestore(app);
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-// Initialize messaging only if supported
-export const messaging = getMessaging(app);
-
-export const googleProvider = new GoogleAuthProvider();
-
-export const requestUserPermission = async () => {
+let auth: Auth;
+if (Platform.OS !== 'web') {
   try {
-    // Check if messaging is supported in the current environment
-    const isMessagingSupported = await isSupported();
-    if (!isMessagingSupported) {
-      console.log('Firebase Messaging is not supported in this environment');
-      return null;
-    }
-
-    // Request notification permissions
-    const permission = await Notification.requestPermission();
-
-    if (permission === 'granted') {
-      console.log('Notification permission granted');
-      try {
-        const token = await getToken(messaging, {
-          vapidKey: process.env.FIREBASE_VAPID_KEY || ''
-        });
-        console.log('FCM Token:', token);
-        return token;
-      } catch (tokenError) {
-        console.error('Error getting FCM token:', tokenError);
-        return null;
-      }
-    } else {
-      console.log('Notification permission not granted');
-      return null;
-    }
-  } catch (error) {
-    console.error('Error requesting notification permission:', error);
-    return null;
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch (e) {
+    // If already initialized
+    auth = getAuth(app);
   }
-};
+} else {
+  auth = getAuth(app); // For web
+}
 
-// Listen for FCM messages when app is in foreground
-export const onMessageListener = (callback: (payload: any) => void) => {
-  return onMessage(messaging, callback);
-};
+// Firestore
+const db = getFirestore(app);
+
+const googleProvider = new GoogleAuthProvider();
+
+
 
 // Google Sign In Configuration
 WebBrowser.maybeCompleteAuthSession();
 
-const useProxy = Platform.select({ web: false, default: true });
 const redirectUri = AuthSession.makeRedirectUri({
   scheme: 'contentoire',
   path: 'google-auth',
-  // useProxy is automatically handled by makeRedirectUri in expo-auth-session
 });
 
 // Google Auth configuration from environment variables
@@ -114,47 +86,7 @@ if (missingOAuth.length > 0) {
   throw new Error('Google OAuth configuration is incomplete. Please check your environment variables.');
 }
 
-// Initialize Google Auth Request
-const [request, response, promptAsync] = Google.useAuthRequest({
-  ...googleConfig,
-  redirectUri,
-});
-
-/**
-* Sign in with Google using Firebase Authentication
-*/
-export const signInWithGoogle = async () => {
-  try {
-    // Start the authentication flow
-    const result = await promptAsync();
-
-    if (result?.type === 'success') {
-      const { authentication } = result;
-      if (!authentication) throw new Error('No authentication data');
-
-      // Create a Firebase credential with the Google ID token and access token
-      const credential = GoogleAuthProvider.credential(
-        authentication.idToken,
-        authentication.accessToken
-      );
-
-      // Sign in with the credential
-      await signInWithCredential(auth, credential);
-
-      return { success: true };
-    }
-
-    return { success: false, error: 'Authentication was cancelled' };
-  } catch (error) {
-    console.error('Google Sign In Error:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'An unknown error occurred'
-    };
-  }
-};
-
-// Email Link Authentication
+// // Email Link Authentication
 export const sendSignInLink = async (email: string) => {
   const actionCodeSettings = {
     url: 'https://contentoire.com/finishSignUp',
@@ -165,7 +97,7 @@ export const sendSignInLink = async (email: string) => {
   await AsyncStorage.setItem('emailForSignIn', email);
 };
 
-// Handle email link sign in
+// // Handle email link sign in
 export const handleEmailLinkSignIn = async (url: string) => {
   if (isSignInWithEmailLink(auth, url)) {
     const email = await AsyncStorage.getItem('emailForSignIn');
@@ -176,3 +108,12 @@ export const handleEmailLinkSignIn = async (url: string) => {
   }
 };
 
+export const handleSignOut = async () => {
+  try {
+    await auth.signOut();
+    router.replace('/login');
+  } catch (error) {
+    console.error('Error signing out: ', error);
+  }
+};
+export { app, auth, db };
