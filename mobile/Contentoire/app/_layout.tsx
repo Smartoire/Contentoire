@@ -35,19 +35,18 @@ export default function RootLayout() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      
+
       // Skip the initial check to prevent flash of content
       if (!isInitialized) {
         setIsInitialized(true);
         return;
       }
-      
+
       // Only redirect if navigation is ready
       if (!rootNavigationState?.key) return;
-      
+
       const currentRoute = segments[0] || '';
       const isLoginPage = currentRoute === 'login';
-      const isInTabs = currentRoute === '(tabs)';
 
       // Redirect logic based on auth state and current route
       if (!currentUser && !isLoginPage) {
@@ -76,8 +75,8 @@ export default function RootLayout() {
         animation: Platform.OS === 'ios' ? 'default' : 'fade',
       }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen 
-          name="login" 
+        <Stack.Screen
+          name="login"
           options={{
             title: 'Sign In',
             animationTypeForReplace: user ? 'pop' : 'push',
