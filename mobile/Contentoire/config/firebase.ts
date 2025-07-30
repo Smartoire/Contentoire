@@ -2,9 +2,8 @@ import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { initializeAuth, GoogleAuthProvider, Auth, getAuth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { router } from 'expo-router';
-import { getMessaging, isSupported, Messaging, getToken, onMessage } from 'firebase/messaging';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getReactNativePersistence } from '@firebase/auth';
+import { getReactNativePersistence } from 'firebase/auth';
 import {
   signInWithCredential,
   linkWithCredential,
@@ -14,7 +13,6 @@ import {
 } from "firebase/auth";
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
-import * as Google from 'expo-auth-session/providers/google';
 import { Platform } from 'react-native';
 export { type User } from 'firebase/auth';
 const firebaseConfig = {

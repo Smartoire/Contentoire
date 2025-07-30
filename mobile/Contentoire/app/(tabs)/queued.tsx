@@ -2,11 +2,14 @@ import { useState, useEffect } from 'react';
 import { Image, StyleSheet, Modal, ScrollView, Linking, Platform, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { collection, query, where, getDocs, updateDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
+import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
+import { usePosts } from '@/hooks/usePosts';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import ParallaxScrollView from '@/components/ParallaxScrollView';
 
 interface Post {
   id: string;
@@ -20,38 +23,19 @@ interface Post {
 }
 
 export default function TabTwoScreen() {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const {
+    posts,
+    loading,
+    refreshing,
+    refreshPosts,
+    updateLocalPost
+  } = usePosts('scheduled');
+
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [editingTime, setEditingTime] = useState<Date>(new Date());
   const [modalVisible, setModalVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [editingTime, setEditingTime] = useState(new Date());
-  const [loading, setLoading] = useState(true);
   const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    fetchQueuedPosts();
-  }, []);
-
-  const fetchQueuedPosts = async () => {
-    try {
-      setLoading(true);
-      const q = query(
-        collection(db, 'posts'),
-        where('status', '==', 'scheduled'),
-        orderBy('suggestedTime', 'asc')
-      );
-      const querySnapshot = await getDocs(q);
-      const postsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Post[];
-      setPosts(postsData);
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handlePostPress = (post: Post) => {
     setSelectedPost(post);
@@ -65,34 +49,23 @@ export default function TabTwoScreen() {
 
     try {
       const postRef = doc(db, 'posts', selectedPost.id);
-      await updateDoc(postRef, {
+      const updatedFields = {
         suggestedTime: Timestamp.fromDate(editingTime)
-      });
+      };
 
-      // Update local state
-      setPosts(posts.map(post =>
-        post.id === selectedPost.id
-          ? { ...post, suggestedTime: Timestamp.fromDate(editingTime) }
-          : post
-      ));
-
+      await updateDoc(postRef, updatedFields);
+      updateLocalPost(selectedPost.id, updatedFields);
       setModalVisible(false);
     } catch (error) {
-      console.error('Error updating post time:', error);
+      console.error('Error updating post:', error);
     }
   };
 
   const formatDate = (date: Date | Timestamp) => {
-    if (!date) return '';
-    const dateObj = date instanceof Timestamp ? date.toDate() : new Date(date);
-    return dateObj.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const d = date instanceof Timestamp ? date.toDate() : new Date(date);
+    return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
+
 
   return (
     <>
@@ -106,34 +79,39 @@ export default function TabTwoScreen() {
             <ThemedText>No scheduled posts found</ThemedText>
           </ThemedView>
         ) : (
-          <ThemedView style={styles.postsContainer}>
-            {posts.map((post) => (
-              <TouchableOpacity
-                key={post.id}
-                style={styles.postCard}
-                onPress={() => handlePostPress(post)}
-              >
-                {post.imageUrl && (
-                  <Image
-                    source={{ uri: post.imageUrl }}
-                    style={styles.postImage}
-                    resizeMode="cover"
-                  />
-                )}
-                <ThemedView style={styles.postContent}>
-                  <ThemedText type="subtitle" style={styles.postTitle} numberOfLines={2}>
-                    {post.title}
-                  </ThemedText>
-                  <ThemedText style={styles.postSnippet} numberOfLines={3}>
-                    {post.content}
-                  </ThemedText>
-                  <ThemedText style={styles.postMeta}>
-                    Scheduled: {formatDate(post.suggestedTime)}
-                  </ThemedText>
-                </ThemedView>
-              </TouchableOpacity>
-            ))}
-          </ThemedView>
+          <ScrollView
+            style={styles.container}
+            contentContainerStyle={styles.scrollContent}
+          >
+            <ThemedView style={styles.postsContainer}>
+              {posts.map((post) => (
+                <TouchableOpacity
+                  key={post.id}
+                  style={styles.postCard}
+                  onPress={() => handlePostPress(post)}
+                >
+                  {post.imageUrl && (
+                    <Image
+                      source={{ uri: post.imageUrl }}
+                      style={styles.postImage}
+                      resizeMode="cover"
+                    />
+                  )}
+                  <ThemedView style={styles.postContent}>
+                    <ThemedText type="subtitle" style={styles.postTitle} numberOfLines={1} ellipsizeMode="tail">
+                      {post.title}
+                    </ThemedText>
+                    <ThemedText style={styles.postSnippet} numberOfLines={2} ellipsizeMode="tail">
+                      {post.content}
+                    </ThemedText>
+                    <ThemedText style={styles.postMeta}>
+                      {formatDate(post.scheduledTime)}
+                    </ThemedText>
+                  </ThemedView>
+                </TouchableOpacity>
+              ))}
+            </ThemedView>
+          </ScrollView>
         )}
       </ThemedView>
 
@@ -199,7 +177,11 @@ export default function TabTwoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     padding: 16,
+    paddingTop: 30,
   },
   title: {
     fontSize: 24,

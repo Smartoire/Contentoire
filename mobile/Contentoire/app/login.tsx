@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { auth } from '@/config/firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from '@firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
