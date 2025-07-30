@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { Image, StyleSheet, Modal, ScrollView, Linking, Platform, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { collection, query, where, getDocs, updateDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
+import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
+import { usePosts } from '@/hooks/usePosts';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
@@ -20,20 +21,19 @@ interface Post {
 }
 
 export default function WaitingListScreen() {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const {
+    posts,
+    loading,
+    refreshing,
+    refreshPosts,
+    updateLocalPost
+  } = usePosts('waiting');
+
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [editingTime, setEditingTime] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [editingTime, setEditingTime] = useState(new Date());
+  const [modalVisible, setModalVisible] = useState(false);
   const insets = useSafeAreaInsets();
-
-  useEffect(() => { fetchWaitingPosts(); }, []);
-
-  const fetchWaitingPosts = async () => {
-    const q = query(collection(db, 'posts'), where('status', '==', 'waiting'), orderBy('suggestedTime', 'asc'));
-    const querySnapshot = await getDocs(q);
-    setPosts(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Post));
-  };
 
   const handleSaveTime = async () => {
     if (!selectedPost) return;
@@ -42,10 +42,11 @@ export default function WaitingListScreen() {
       const newDate = new Date(editingTime);
       const currentTime = selectedPost.suggestedTime.toDate();
       newDate.setHours(currentTime.getHours(), currentTime.getMinutes());
-      
+
       await updateDoc(doc(db, 'posts', selectedPost.id), {
         suggestedTime: Timestamp.fromDate(newDate)
       });
+      updateLocalPost(selectedPost.id, { suggestedTime: Timestamp.fromDate(newDate) });
       setPosts(posts.map(p => p.id === selectedPost.id ? { ...p, suggestedTime: Timestamp.fromDate(newDate) } : p));
       setModalVisible(false);
     } catch (error) {
@@ -72,33 +73,38 @@ export default function WaitingListScreen() {
         {posts.length === 0 ? (
           <ThemedView style={styles.emptyState}><ThemedText>No posts in waiting list</ThemedText></ThemedView>
         ) : (
-          <ThemedView style={styles.postsContainer}>
-            {posts.map((post) => (
-              <ThemedView key={post.id} style={styles.postCard}>
-                {post.imageUrl && <Image source={{ uri: post.imageUrl }} style={styles.postImage} />}
-                <ThemedView style={styles.postContent}>
-                  <ThemedText type="subtitle" style={styles.postTitle} numberOfLines={1} ellipsizeMode="tail">
-                    {post.title}
-                  </ThemedText>
-                  <ThemedText style={styles.postSnippet} numberOfLines={2} ellipsizeMode="tail">
-                    {post.content}
-                  </ThemedText>
-                  <TouchableOpacity 
-                    style={[styles.editButton, { marginTop: 8 }]} 
-                    onPress={() => {
-                      setSelectedPost(post);
-                      setEditingTime(post.suggestedTime.toDate());
-                      setModalVisible(true);
-                    }}
-                  >
-                    <ThemedText style={styles.editButtonText}>
-                      {formatDate(post.suggestedTime)}
+          <ScrollView
+            style={styles.container}
+            contentContainerStyle={styles.scrollContent}
+          >
+            <ThemedView style={styles.postsContainer}>
+              {posts.map((post) => (
+                <ThemedView key={post.id} style={styles.postCard}>
+                  {post.imageUrl && <Image source={{ uri: post.imageUrl }} style={styles.postImage} resizeMode="cover" />}
+                  <ThemedView style={styles.postContent}>
+                    <ThemedText type="subtitle" style={styles.postTitle} numberOfLines={1} ellipsizeMode="tail">
+                      {post.title}
                     </ThemedText>
-                  </TouchableOpacity>
+                    <ThemedText style={styles.postSnippet} numberOfLines={2} ellipsizeMode="tail">
+                      {post.content}
+                    </ThemedText>
+                    <TouchableOpacity
+                      style={[styles.editButton, { marginTop: 8 }]}
+                      onPress={() => {
+                        setSelectedPost(post);
+                        setEditingTime(post.suggestedTime.toDate());
+                        setModalVisible(true);
+                      }}
+                    >
+                      <ThemedText style={styles.editButtonText}>
+                        {formatDate(post.suggestedTime)}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </ThemedView>
                 </ThemedView>
-              </ThemedView>
-            ))}
-          </ThemedView>
+              ))}
+            </ThemedView>
+          </ScrollView>
         )}
       </ThemedView>
 
@@ -130,7 +136,8 @@ export default function WaitingListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
+  container: { flex: 1 },
+  scrollContent: { flexGrow: 1, padding: 16, paddingTop: 30 },
   postTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -140,7 +147,11 @@ const styles = StyleSheet.create({
   emptyState: { justifyContent: 'center', alignItems: 'center', padding: 20, minHeight: 200 },
   postsContainer: { gap: 16, paddingBottom: 20 },
   postCard: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', elevation: 2 },
-  postImage: { width: 100, height: 100 },
+  postImage: {
+    width: 100,
+    height: '100%',
+    minHeight: 100,
+  },
   postContent: { flex: 1, padding: 12, justifyContent: 'space-between' },
   postSnippet: {
     fontSize: 14,
@@ -148,16 +159,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     flexShrink: 1,
   },
-  editButton: { 
-    padding: 8, 
-    backgroundColor: '#f0f0f0', 
-    borderRadius: 6, 
+  editButton: {
+    padding: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 6,
     alignItems: 'center',
     alignSelf: 'flex-start',
     minWidth: 150,
   },
-  editButtonText: { 
-    color: '#007AFF', 
+  editButtonText: {
+    color: '#007AFF',
     fontSize: 14,
     textAlign: 'center',
   },
