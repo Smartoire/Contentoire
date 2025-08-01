@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { Image, StyleSheet, Modal, ScrollView, Linking, Platform, TouchableOpacity } from 'react-native';
+import { useState, useCallback } from 'react';
+import { Image, StyleSheet, Modal, ScrollView, Linking, Platform, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { usePosts } from '@/hooks/usePosts';
@@ -17,19 +17,28 @@ interface Post {
   content: string;
   imageUrl?: string;
   sourceUrl: string;
-  scheduledTime: Timestamp;
+  scheduledTime: Timestamp | null;
   suggestedTime: Timestamp;
-  status: 'scheduled' | 'posted';
+  status: 'scheduled' | 'posted' | 'waiting';
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export default function TabTwoScreen() {
   const {
-    posts,
+    posts: unsortedPosts,
     loading,
     refreshing,
     refreshPosts,
     updateLocalPost
   } = usePosts('scheduled');
+
+  // Sort posts by scheduled time (earliest first)
+  const posts = [...unsortedPosts].sort((a, b) => {
+    const timeA = a.scheduledTime?.toDate().getTime() || 0;
+    const timeB = b.scheduledTime?.toDate().getTime() || 0;
+    return timeA - timeB;
+  });
 
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [editingTime, setEditingTime] = useState<Date>(new Date());
@@ -44,24 +53,67 @@ export default function TabTwoScreen() {
     setModalVisible(true);
   };
 
-  const handleSaveTime = async () => {
+  // Helper function to check if a time is at least 3 hours from now
+  const isAtLeast3HoursLater = (date: Date): boolean => {
+    const threeHoursFromNow = new Date();
+    threeHoursFromNow.setHours(threeHoursFromNow.getHours() + 3);
+    return date >= threeHoursFromNow;
+  };
+
+  const handleReschedule = useCallback(async () => {
     if (!selectedPost) return;
+    
+    // Validate the new time is at least 3 hours from now
+    if (!isAtLeast3HoursLater(editingTime)) {
+      Alert.alert(
+        'Invalid Time',
+        'New scheduled time must be at least 3 hours from now.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
 
     try {
       const postRef = doc(db, 'posts', selectedPost.id);
       const updatedFields = {
-        suggestedTime: Timestamp.fromDate(editingTime)
+        suggestedTime: Timestamp.fromDate(editingTime),
+        scheduledTime: Timestamp.fromDate(editingTime),
+        updatedAt: Timestamp.now()
       };
 
       await updateDoc(postRef, updatedFields);
       updateLocalPost(selectedPost.id, updatedFields);
       setModalVisible(false);
+      Alert.alert('Success', 'Post has been rescheduled.');
     } catch (error) {
-      console.error('Error updating post:', error);
+      console.error('Error rescheduling post:', error);
+      Alert.alert('Error', 'Failed to reschedule post. Please try again.');
     }
-  };
+  }, [selectedPost, editingTime, updateLocalPost]);
 
-  const formatDate = (date: Date | Timestamp) => {
+  const handleMoveToWaitingList = useCallback(async () => {
+    if (!selectedPost) return;
+    
+    try {
+      const postRef = doc(db, 'posts', selectedPost.id);
+      const updatedFields = {
+        status: 'waiting' as const,
+        scheduledTime: null as any, // Using any to bypass type checking for Firestore
+        updatedAt: Timestamp.now()
+      };
+
+      await updateDoc(postRef, updatedFields);
+      updateLocalPost(selectedPost.id, updatedFields);
+      setModalVisible(false);
+      Alert.alert('Success', 'Post has been moved back to the waiting list.');
+    } catch (error) {
+      console.error('Error moving post to waiting list:', error);
+      Alert.alert('Error', 'Failed to move post to waiting list. Please try again.');
+    }
+  }, [selectedPost, updateLocalPost]);
+
+  const formatDate = (date: Date | Timestamp | null | undefined) => {
+    if (!date) return 'Not scheduled';
     const d = date instanceof Timestamp ? date.toDate() : new Date(date);
     return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
@@ -149,12 +201,53 @@ export default function TabTwoScreen() {
                 <ThemedText>{formatDate(editingTime)}</ThemedText>
               </ThemedView>
 
-              {/* No date picker for queued posts */}
-            </ThemedView>
+              </ThemedView>
+
+              {/* Date picker for rescheduling */}
+              <ThemedView style={styles.timeSelectionContainer}>
+                <ThemedText style={styles.timeLabel}>New Scheduled Time:</ThemedText>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={editingTime}
+                    mode="datetime"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowDatePicker(Platform.OS === 'ios');
+                      if (selectedDate) {
+                        setEditingTime(selectedDate);
+                      }
+                    }}
+                    minimumDate={new Date()}
+                  />
+                )}
+                <TouchableOpacity 
+                  style={[styles.timeButton, { backgroundColor: '#f5f5f5' }]}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <ThemedText>{formatDate(editingTime)}</ThemedText>
+                  <MaterialIcons name="edit" size={20} color="#007AFF" />
+                </TouchableOpacity>
+              </ThemedView>
 
             <ThemedText style={styles.modalText}>
               {selectedPost?.content}
             </ThemedText>
+            
+            <ThemedView style={styles.actionButtonsContainer}>
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.rescheduleButton]}
+                onPress={handleReschedule}
+              >
+                <ThemedText style={styles.actionButtonText}>Reschedule</ThemedText>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.moveToWaitingButton]}
+                onPress={handleMoveToWaitingList}
+              >
+                <ThemedText style={styles.actionButtonText}>Move to Waiting List</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
 
             <TouchableOpacity
               style={styles.sourceButton}
@@ -294,6 +387,29 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     alignItems: 'center',
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    gap: 10,
+  },
+  actionButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rescheduleButton: {
+    backgroundColor: '#007AFF',
+  },
+  moveToWaitingButton: {
+    backgroundColor: '#FF3B30',
+  },
+  actionButtonText: {
+    color: 'white',
+    fontWeight: '600',
   },
   sourceButton: {
     flexDirection: 'row',
