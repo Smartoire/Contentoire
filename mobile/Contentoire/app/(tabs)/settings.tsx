@@ -1,131 +1,109 @@
-import { Image } from 'expo-image';
-import { 
-  StyleSheet, 
-  View, 
-  ActivityIndicator, 
-  Alert, 
-  Dimensions,
-  TouchableOpacity,
-} from 'react-native';
-import { 
-  Ionicons, 
-  FontAwesome, 
-  FontAwesome5
-} from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { signOut } from 'firebase/auth';
+import { ThemedText } from '@/components/ThemedText';
 import { auth } from '@/config/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { useRefresh } from '@/hooks/useRefresh';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { FontAwesome, FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { signOut } from 'firebase/auth';
+import React, { useCallback, useState } from 'react';
+import {
+    Alert,
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
-type ButtonConfig = {
+const { width } = Dimensions.get('window');
+
+interface SocialMediaToggle {
   id: string;
-  title: string;
+  name: string;
   icon: React.ReactNode;
   color: string;
-  onPress: () => void;
-  isLoading?: boolean;
-  isActive?: boolean;
-};
+  enabled: boolean;
+}
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-  },
-  titleContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  buttonsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 16,
-    paddingHorizontal: 8,
-  },
-  buttonWrapper: {
-    width: (Dimensions.get('window').width - 64) / 2,
-    aspectRatio: 1,
-    marginBottom: 16,
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  settingsButton: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 12,
-  },
-  buttonContent: {
-    alignItems: 'center',
-    padding: 8,
-  },
-  iconContainer: {
-    marginBottom: 8,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
-
-const SettingsButton: React.FC<ButtonConfig> = ({
-  id,
-  title,
-  icon,
-  color,
-  onPress,
-  isLoading = false,
-  isActive = true,
-}) => {
-  const buttonColor = isActive ? color : '#CCCCCC';
-  
-  return (
-    <View key={id} style={styles.buttonWrapper}>
-      <TouchableOpacity
-        style={[styles.settingsButton, { backgroundColor: buttonColor }]}
-        onPress={onPress}
-        disabled={isLoading || !isActive}
-      >
-        {isLoading ? (
-          <ActivityIndicator color="white" />
-        ) : (
-          <View style={styles.buttonContent}>
-            <View style={styles.iconContainer}>{icon}</View>
-            <ThemedText style={styles.buttonText}>{title}</ThemedText>
-          </View>
-        )}
-      </TouchableOpacity>
-    </View>
-  );
-};
+interface UserParameter {
+  id: string;
+  name: string;
+  value: string;
+  type: 'text' | 'number';
+  placeholder: string;
+}
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, userProfile, toggleMedia } = useAuth();
+  const { refreshAll } = useRefresh();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const { refreshAll } = useRefresh();
+
+  // User parameters state
+  const [userParams, setUserParams] = useState<UserParameter[]>([
+    {
+      id: 'postingFrequency',
+      name: 'Posting Frequency (hours)',
+      value: '24',
+      type: 'number',
+      placeholder: '24',
+    },
+    {
+      id: 'timeZone',
+      name: 'Time Zone',
+      value: 'UTC',
+      type: 'text',
+      placeholder: 'UTC',
+    },
+    {
+      id: 'maxPostsPerDay',
+      name: 'Max Posts Per Day',
+      value: '5',
+      type: 'number',
+      placeholder: '5',
+    },
+  ]);
+
+  const socialMediaPlatforms: SocialMediaToggle[] = [
+    {
+      id: 'twitter',
+      name: 'Twitter',
+      icon: <FontAwesome name="twitter" size={20} color="white" />,
+      color: '#1DA1F2',
+      enabled: userProfile?.enabledMedia?.includes('twitter') || false,
+    },
+    {
+      id: 'instagram',
+      name: 'Instagram',
+      icon: <FontAwesome name="instagram" size={20} color="white" />,
+      color: '#E4405F',
+      enabled: userProfile?.enabledMedia?.includes('instagram') || false,
+    },
+    {
+      id: 'facebook',
+      name: 'Facebook',
+      icon: <FontAwesome5 name="facebook" size={20} color="white" />,
+      color: '#1877F2',
+      enabled: userProfile?.enabledMedia?.includes('facebook') || false,
+    },
+    {
+      id: 'linkedin',
+      name: 'LinkedIn',
+      icon: <FontAwesome5 name="linkedin" size={20} color="white" />,
+      color: '#0A66C2',
+      enabled: userProfile?.enabledMedia?.includes('linkedin') || false,
+    },
+    {
+      id: 'tiktok',
+      name: 'TikTok',
+      icon: <FontAwesome5 name="tiktok" size={20} color="white" />,
+      color: '#000000',
+      enabled: userProfile?.enabledMedia?.includes('tiktok') || false,
+    },
+  ];
 
   const handleRefresh = useCallback(async () => {
     try {
@@ -166,94 +144,227 @@ export default function SettingsScreen() {
     }
   }, [toggleMedia]);
 
-  const buttons: ButtonConfig[] = [
-    {
-      id: 'refresh',
-      title: 'Refresh',
-      icon: <Ionicons name="refresh" size={24} color="white" />,
-      color: '#007AFF',
-      onPress: handleRefresh,
-      isLoading: isRefreshing,
-    },
-    {
-      id: 'edit-profile',
-      title: 'Edit Profile',
-      icon: <Ionicons name="person" size={24} color="white" />,
-      color: '#34C759',
-      onPress: handleEditProfile,
-    },
-    {
-      id: 'twitter',
-      title: 'Twitter',
-      icon: <FontAwesome name="twitter" size={24} color="white" />,
-      color: '#1DA1F2',
-      onPress: () => handleToggleMedia('twitter'),
-      isActive: userProfile?.enabledMedia?.includes('twitter') || false,
-    },
-    {
-      id: 'instagram',
-      title: 'Instagram',
-      icon: <FontAwesome name="instagram" size={24} color="white" />,
-      color: '#E4405F',
-      onPress: () => handleToggleMedia('instagram'),
-      isActive: userProfile?.enabledMedia?.includes('instagram') || false,
-    },
-    {
-      id: 'facebook',
-      title: 'Facebook',
-      icon: <FontAwesome5 name="facebook" size={24} color="white" />,
-      color: '#1877F2',
-      onPress: () => handleToggleMedia('facebook'),
-      isActive: userProfile?.enabledMedia?.includes('facebook') || false,
-    },
-    {
-      id: 'linkedin',
-      title: 'LinkedIn',
-      icon: <FontAwesome5 name="linkedin" size={24} color="white" />,
-      color: '#0A66C2',
-      onPress: () => handleToggleMedia('linkedin'),
-      isActive: userProfile?.enabledMedia?.includes('linkedin') || false,
-    },
-    {
-      id: 'tiktok',
-      title: 'TikTok',
-      icon: <FontAwesome5 name="tiktok" size={24} color="white" />,
-      color: '#000000',
-      onPress: () => handleToggleMedia('tiktok'),
-      isActive: userProfile?.enabledMedia?.includes('tiktok') || false,
-    },
-    {
-      id: 'sign-out',
-      title: 'Sign Out',
-      icon: <Ionicons name="log-out" size={24} color="white" />,
-      color: '#FF3B30',
-      onPress: handleSignOut,
-      isLoading: isSigningOut,
-    },
-  ];
+  const handleParameterChange = useCallback((id: string, value: string) => {
+    setUserParams(prev => 
+      prev.map(param => 
+        param.id === id ? { ...param, value } : param
+      )
+    );
+  }, []);
+
+  const renderSocialMediaToggle = (platform: SocialMediaToggle) => (
+    <View key={platform.id} style={styles.toggleContainer}>
+      <View style={styles.toggleHeader}>
+        <View style={[styles.platformIcon, { backgroundColor: platform.color }]}>
+          {platform.icon}
+        </View>
+        <View style={styles.toggleInfo}>
+          <ThemedText style={styles.platformName}>{platform.name}</ThemedText>
+          <ThemedText style={styles.platformStatus}>
+            {platform.enabled ? 'Enabled' : 'Disabled'}
+          </ThemedText>
+        </View>
+      </View>
+      <Switch
+        value={platform.enabled}
+        onValueChange={() => handleToggleMedia(platform.id)}
+        trackColor={{ false: '#767577', true: platform.color }}
+        thumbColor={platform.enabled ? '#f4f3f4' : '#f4f3f4'}
+      />
+    </View>
+  );
+
+  const renderUserParameter = (param: UserParameter) => (
+    <View key={param.id} style={styles.parameterContainer}>
+      <ThemedText style={styles.parameterLabel}>{param.name}</ThemedText>
+      <TextInput
+        style={styles.parameterInput}
+        value={param.value}
+        onChangeText={(value) => handleParameterChange(param.id, value)}
+        placeholder={param.placeholder}
+        keyboardType={param.type === 'number' ? 'numeric' : 'default'}
+      />
+    </View>
+  );
+
+  const renderActionButton = (
+    title: string,
+    icon: React.ReactNode,
+    color: string,
+    onPress: () => void,
+    isLoading = false
+  ) => (
+    <TouchableOpacity
+      style={[styles.actionButton, { backgroundColor: color }]}
+      onPress={onPress}
+      disabled={isLoading}
+    >
+      <View style={styles.actionButtonContent}>
+        {icon}
+        <ThemedText style={styles.actionButtonText}>
+          {isLoading ? 'Loading...' : title}
+        </ThemedText>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/Contentoire.png')}
-          style={styles.reactLogo}
-          contentFit="contain"
-        />
-      }
-    >
-      <ThemedView style={styles.container}>
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="title">Settings</ThemedText>
-        </ThemedView>
-        
-        <View style={styles.buttonsContainer}>
-          {buttons.map((button) => (
-            <SettingsButton key={button.id} {...button} />
-          ))}
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* User Info Section */}
+      <View style={styles.section}>
+        <ThemedText style={styles.sectionTitle}>User Information</ThemedText>
+        <View style={styles.userInfo}>
+          <ThemedText style={styles.userEmail}>{user?.email}</ThemedText>
+          <TouchableOpacity style={styles.editProfileButton} onPress={handleEditProfile}>
+            <Ionicons name="person" size={16} color="#007AFF" />
+            <ThemedText style={styles.editProfileText}>Edit Profile</ThemedText>
+          </TouchableOpacity>
         </View>
-      </ThemedView>
-    </ParallaxScrollView>
+      </View>
+
+      {/* User Parameters Section */}
+      <View style={styles.section}>
+        <ThemedText style={styles.sectionTitle}>Posting Parameters</ThemedText>
+        {userParams.map(renderUserParameter)}
+      </View>
+
+      {/* Social Media Section */}
+      <View style={styles.section}>
+        <ThemedText style={styles.sectionTitle}>Social Media Platforms</ThemedText>
+        {socialMediaPlatforms.map(renderSocialMediaToggle)}
+      </View>
+
+      {/* Actions Section */}
+      <View style={styles.section}>
+        <ThemedText style={styles.sectionTitle}>Actions</ThemedText>
+        {renderActionButton(
+          'Refresh Data',
+          <Ionicons name="refresh" size={20} color="white" />,
+          '#007AFF',
+          handleRefresh,
+          isRefreshing
+        )}
+        {renderActionButton(
+          'Sign Out',
+          <Ionicons name="log-out" size={20} color="white" />,
+          '#FF3B30',
+          handleSignOut,
+          isSigningOut
+        )}
+      </View>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  section: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  userEmail: {
+    fontSize: 16,
+    color: '#666',
+    flex: 1,
+  },
+  editProfileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+  },
+  editProfileText: {
+    fontSize: 14,
+    color: '#007AFF',
+    marginLeft: 4,
+  },
+  parameterContainer: {
+    marginBottom: 16,
+  },
+  parameterLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 8,
+  },
+  parameterInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+    color: '#333',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  toggleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  platformIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  toggleInfo: {
+    flex: 1,
+  },
+  platformName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  platformStatus: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
+  actionButton: {
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  actionButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+});
