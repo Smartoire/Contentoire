@@ -11,7 +11,7 @@ export function useAuthCheck(requireAuth = true) {
         router.replace('/login');
       } else if (!requireAuth && user) {
         // If authentication is not required but user is logged in, redirect to waitingList tab
-        router.replace('/(tabs)/waitingList');
+        router.replace('/(tabs)/waiting');
       }
     });
 

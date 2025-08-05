@@ -1,30 +1,33 @@
-import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { initializeAuth, GoogleAuthProvider, Auth, getAuth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getReactNativePersistence } from 'firebase/auth';
-import {
-  signInWithCredential,
-  linkWithCredential,
-  signInWithEmailLink,
-  sendSignInLinkToEmail,
-  isSignInWithEmailLink
-} from "firebase/auth";
-import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
+import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import { getApps, initializeApp } from 'firebase/app';
+import { Auth, getAuth, getReactNativePersistence, GoogleAuthProvider, initializeAuth, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 import { Platform } from 'react-native';
 export { type User } from 'firebase/auth';
+
 const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY,
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.FIREBASE_APP_ID,
-  measurementId: process.env.FIREBASE_MEASUREMENT_ID
+  apiKey: process.env.FIREBASE_API_KEY || 'demo-api-key',
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || 'demo-project.firebaseapp.com',
+  projectId: process.env.FIREBASE_PROJECT_ID || 'demo-project',
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'demo-project.appspot.com',
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || '123456789',
+  appId: process.env.FIREBASE_APP_ID || '1:123456789:web:demo',
+  measurementId: process.env.FIREBASE_MEASUREMENT_ID || 'G-DEMO'
 };
 
+// Log configuration status for debugging
+console.log('Firebase Config Status:', {
+  apiKey: !!firebaseConfig.apiKey,
+  authDomain: !!firebaseConfig.authDomain,
+  projectId: !!firebaseConfig.projectId,
+  storageBucket: !!firebaseConfig.storageBucket,
+  messagingSenderId: !!firebaseConfig.messagingSenderId,
+  appId: !!firebaseConfig.appId,
+  measurementId: !!firebaseConfig.measurementId
+});
 
 // Validate required Firebase configuration
 const requiredConfig = ['apiKey', 'authDomain', 'projectId'];
@@ -32,7 +35,13 @@ const missingConfig = requiredConfig.filter(key => !firebaseConfig[key as keyof 
 
 if (missingConfig.length > 0) {
   console.error('Missing required Firebase configuration:', missingConfig.join(', '));
-  throw new Error('Firebase configuration is incomplete. Please check your environment variables.');
+  console.error('Please check your environment variables. Make sure you have a .env file with the required Firebase configuration.');
+  // Don't throw error in development, just log it
+  if (__DEV__) {
+    console.warn('Firebase configuration is incomplete. The app may not work properly.');
+  } else {
+    throw new Error('Firebase configuration is incomplete. Please check your environment variables.');
+  }
 }
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
@@ -55,8 +64,6 @@ if (Platform.OS !== 'web') {
 const db = getFirestore(app);
 
 const googleProvider = new GoogleAuthProvider();
-
-
 
 // Google Sign In Configuration
 WebBrowser.maybeCompleteAuthSession();
@@ -81,10 +88,16 @@ const missingOAuth = requiredOAuth.filter(key => !googleConfig[key as keyof type
 
 if (missingOAuth.length > 0) {
   console.error('Missing required Google OAuth configuration:', missingOAuth.join(', '));
-  throw new Error('Google OAuth configuration is incomplete. Please check your environment variables.');
+  console.error('Please check your environment variables. Make sure you have a .env file with the required Google OAuth configuration.');
+  // Don't throw error in development, just log it
+  if (__DEV__) {
+    console.warn('Google OAuth configuration is incomplete. Google Sign-In may not work properly.');
+  } else {
+    throw new Error('Google OAuth configuration is incomplete. Please check your environment variables.');
+  }
 }
 
-// // Email Link Authentication
+// Email Link Authentication
 export const sendSignInLink = async (email: string) => {
   const actionCodeSettings = {
     url: 'https://contentoire.com/finishSignUp',
@@ -95,7 +108,7 @@ export const sendSignInLink = async (email: string) => {
   await AsyncStorage.setItem('emailForSignIn', email);
 };
 
-// // Handle email link sign in
+// Handle email link sign in
 export const handleEmailLinkSignIn = async (url: string) => {
   if (isSignInWithEmailLink(auth, url)) {
     const email = await AsyncStorage.getItem('emailForSignIn');
@@ -114,4 +127,5 @@ export const handleSignOut = async () => {
     console.error('Error signing out: ', error);
   }
 };
+
 export { app, auth, db };
