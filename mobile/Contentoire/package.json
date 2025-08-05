@@ -16,7 +16,7 @@
     "@react-native-firebase/app": "^22.4.0",
     "@react-native-firebase/auth": "^22.4.0",
     "@react-native-firebase/firestore": "^22.4.0",
-    "@react-navigation/bottom-tabs": "^7.3.10",
+    "@react-navigation/bottom-tabs": "^7.4.5",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
     "@sentry/react-native": "^6.19.0",
@@ -56,6 +56,7 @@
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
     "feedparser": "^2.2.10",
+    "prettier": "^3.6.2",
     "typescript": "~5.8.3"
   },
   "private": true
