@@ -1,11 +1,10 @@
+import Svg, { Path } from 'react-native-svg';
 import { TextInput } from '@/components/TextInput';
-import { FontAwesome } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -13,44 +12,100 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
+  Keyboard,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 import Toast from 'react-native-toast-message';
+import useGoogleAuth from './auth/GoogleAuth';
+import { FontAwesome } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
 
 export default function LoginScreen() {
+  // Form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const isFormValid = email.trim() && password.trim();
+  // Google Auth
+  const {
+    isLoading: isGoogleLoading,
+    userInfo,
+    authError,
+    handleGoogleSignIn,
+    handleSignOut
+  } = useGoogleAuth();
 
-  const handleLogin = async () => {
+  // Show auth error if any
+  useEffect(() => {
+    if (authError) {
+      Toast.show({
+        type: 'error',
+        text1: 'Authentication Error',
+        text2: authError,
+      });
+    }
+  }, [authError]);
+
+  // Check form validity
+  useEffect(() => {
+    setIsFormValid(email.length > 0 && password.length >= 8);
+  }, [email, password]);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (userInfo) {
+      router.replace('/(tabs)');
+    }
+  }, [userInfo]);
+
+  // Handle email/password sign in
+  const handleSignIn = async () => {
     if (!isFormValid) return;
 
+    Keyboard.dismiss();
     setIsLoading(true);
+
     try {
-      // Simulate Firebase authentication
+      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // For demo purposes, accept any email/password
-      if (email && password) {
-        Toast.show({
-          type: 'success',
-          text1: 'Welcome Back!',
-          text2: 'Successfully signed in',
-          position: 'top',
-          visibilityTime: 2000,
-        });
-        router.replace('/(tabs)');
-      } else {
-        throw new Error('Invalid credentials');
-      }
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Signed in successfully!',
+      });
+
+      // Navigate to the app after successful sign in
+      router.replace('/(tabs)');
     } catch (error) {
-      Alert.alert('Login Failed', 'Please check your credentials and try again.');
+      console.error('Error signing in:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Sign In Failed',
+        text2: 'Failed to sign in. Please check your credentials and try again.',
+      });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Handle Google Sign In
+  const handleGoogleSignInPress = async () => {
+    try {
+      await handleGoogleSignIn();
+    } catch (error) {
+      console.error('Error during Google sign in:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Google Sign In Failed',
+        text2: 'Failed to sign in with Google. Please try again.',
+      });
     }
   };
 
@@ -65,43 +120,55 @@ export default function LoginScreen() {
   };
 
   const handleForgotPassword = () => {
-    Alert.alert('Reset Password', 'Password reset functionality coming soon!');
+    Toast.show({
+      type: 'info',
+      text1: `Reset Password`,
+      text2: `Reset Password functionality coming soon!`,
+      position: 'top',
+      visibilityTime: 3000,
+    });
+  };
+
+  // Toggle password visibility
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header with Wave */}
-      <View style={styles.header}>
-        <LinearGradient
-          colors={['#1a1a1a', '#2d2d2d']}
-          style={styles.headerGradient}
-        >
-          <SafeAreaView style={styles.safeArea}>
-            <View style={styles.logoContainer}>
-              <Image
-                source={require('../assets/images/logo.png')}
-                style={styles.logoImage}
-              />
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
+      >
+        {/* Header with Wave */}
+        <View style={styles.header}>
+          <LinearGradient
+            colors={['#1a1a1a', '#2d2d2d']}
+            style={styles.headerGradient}
+          >
+            <SafeAreaView style={styles.safeArea}>
+              <View style={styles.logoContainer}>
+                <Image
+                  source={require('../assets/images/logo.png')}
+                  style={styles.logoImage}
+                />
+              </View>
+            </SafeAreaView>
+
+            {/* Wave Shape */}
+            <View style={styles.waveContainer}>
+              <Svg height="60" width="100%" viewBox="0 0 400 60" style={styles.wave}>
+                <Path
+                  d="M0,30 Q100,10 200,30 T400,30 L400,60 L0,60 Z"
+                  fill="#FFFFFF"
+                />
+              </Svg>
             </View>
-          </SafeAreaView>
-
-          {/* Wave Shape */}
-          <View style={styles.waveContainer}>
-            <Svg height="60" width="100%" viewBox="0 0 400 60" style={styles.wave}>
-              <Path
-                d="M0,30 Q100,10 200,30 T400,30 L400,60 L0,60 Z"
-                fill="#FFFFFF"
-              />
-            </Svg>
-          </View>
-        </LinearGradient>
-      </View>
-
-      {/* Content Area */}
-      <View style={styles.content}>
-        <KeyboardAvoidingView
-          style={styles.keyboardView}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          </LinearGradient>
+        </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollView}
+          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.formContainer}>
             {/* Welcome Title */}
@@ -180,11 +247,11 @@ export default function LoginScreen() {
                 styles.loginButton,
                 !isFormValid && styles.loginButtonDisabled,
               ]}
-              onPress={handleLogin}
+              onPress={handleSignIn}
               disabled={!isFormValid || isLoading}
             >
               <LinearGradient
-                colors={['#FFD700', '#FFA500']}
+                colors={['#F7955D', '#FFA500']}
                 style={styles.buttonGradient}
               >
                 <Text style={styles.loginButtonText}>
@@ -196,7 +263,7 @@ export default function LoginScreen() {
             {/* New User Link */}
             <View style={styles.signUpContainer}>
               <Text style={styles.signUpText}>New user? </Text>
-              <TouchableOpacity onPress={() => Alert.alert('Coming Soon', 'Sign up functionality')}>
+              <TouchableOpacity onPress={() => Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Sign up functionality' })}>
                 <Text style={styles.signUpLink}>Sign Up</Text>
               </TouchableOpacity>
             </View>
@@ -251,9 +318,10 @@ export default function LoginScreen() {
               </View>
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </View>
-    </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <Toast />
+    </SafeAreaView>
   );
 }
 
@@ -302,7 +370,7 @@ const styles = StyleSheet.create({
   formContainer: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 40,
+    paddingTop: 10,
   },
   welcomeSection: {
     alignItems: 'center',
@@ -352,7 +420,7 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: '#FFD700',
+    borderColor: '#F7955D',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
@@ -361,7 +429,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#F7955D',
   },
   rememberText: {
     fontSize: 14,
@@ -369,7 +437,7 @@ const styles = StyleSheet.create({
   },
   forgotPassword: {
     fontSize: 14,
-    color: '#FFD700',
+    color: '#F7955D',
     fontWeight: '500',
   },
   loginButton: {
@@ -400,7 +468,7 @@ const styles = StyleSheet.create({
   },
   signUpLink: {
     fontSize: 14,
-    color: '#FFD700',
+    color: '#F7955D',
     fontWeight: '500',
   },
   divider: {
@@ -442,5 +510,96 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#E9ECEF',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollView: {
+    flexGrow: 1,
+    padding: 20,
+  },
+  logo: {
+    width: width * 0.4,
+    height: width * 0.4,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 30,
+    textAlign: 'center',
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    height: 48,
+    fontSize: 16,
+    color: '#333',
+  },
+  passwordInput: {
+    paddingRight: 40,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 12,
+    padding: 10,
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    padding: 14,
+    borderRadius: 8,
+  },
+  googleIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 12,
+  },
+  googleButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  footer: {
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  footerText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
