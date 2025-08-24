@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { Calendar, Clock } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface DateTimeSelectorProps {
   selectedDate: Date;
@@ -44,7 +44,7 @@ export function DateTimeSelector({ selectedDate, onDateChange }: DateTimeSelecto
       
       <View style={styles.selectorRow}>
         <TouchableOpacity style={styles.selectorButton} onPress={handleDatePress}>
-          <Calendar size={20} color="#007AFF" strokeWidth={2} />
+          <MaterialCommunityIcons name="calendar" size={20} color="#666" />
           <View style={styles.selectorContent}>
             <Text style={styles.selectorLabel}>Date</Text>
             <Text style={styles.selectorValue}>{formatDate(selectedDate)}</Text>
@@ -52,7 +52,7 @@ export function DateTimeSelector({ selectedDate, onDateChange }: DateTimeSelecto
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.selectorButton} onPress={handleTimePress}>
-          <Clock size={20} color="#007AFF" strokeWidth={2} />
+          <MaterialCommunityIcons name="clock-outline" size={20} color="#666" />
           <View style={styles.selectorContent}>
             <Text style={styles.selectorLabel}>Time</Text>
             <Text style={styles.selectorValue}>{formatTime(selectedDate)}</Text>

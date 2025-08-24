@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RefreshCw } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { NewsHeader } from '@/components/NewsHeader';
 import { NewsCard } from '@/components/NewsCard';
 import { SearchInput } from '@/components/SearchInput';
@@ -130,7 +130,15 @@ export default function HomeScreen() {
           ) : null
         }
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor="#007AFF"
+            title="Refreshing..."
+            titleColor="#007AFF"
+          >
+            <MaterialCommunityIcons name="refresh" size={24} color="#007AFF" />
+          </RefreshControl>
         }
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}

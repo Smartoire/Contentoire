@@ -18,7 +18,7 @@ export function Screen({
   edges = ['top'],
 }: ScreenProps) {
   return (
-    <SafeAreaView 
+    <SafeAreaView
       style={[styles.container, { backgroundColor }]}
       edges={edges}
     >
@@ -27,12 +27,12 @@ export function Screen({
         backgroundColor={statusBarColor}
         translucent={true}
       />
-      <View 
+      <View
         style={[
           styles.content,
-          { 
+          {
             backgroundColor,
-            paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+            paddingTop: 0,
           }
         ]}
       >

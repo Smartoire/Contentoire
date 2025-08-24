@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Tabs, router } from 'expo-router';
-import { Chrome as Home, Calendar, User } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { authService } from '@/services/authService';
 import { ActivityIndicator, View, StyleSheet, StatusBar } from 'react-native';
 import { Screen } from '@/components/Screen';
@@ -79,27 +79,21 @@ export default function TabLayout() {
           name="index"
           options={{
             title: 'Home',
-            tabBarIcon: ({ size, color }: { size: number; color: string }) => (
-              <Home size={size} color={color} strokeWidth={2} />
-            ),
+            tabBarIcon: ({ color }) => <MaterialCommunityIcons name="home" size={24} color={color} />,
           }}
         />
         <Tabs.Screen
           name="schedule"
           options={{
             title: 'Schedule',
-            tabBarIcon: ({ size, color }: { size: number; color: string }) => (
-              <Calendar size={size} color={color} strokeWidth={2} />
-            ),
+            tabBarIcon: ({ color }) => <MaterialCommunityIcons name="calendar" size={24} color={color} />,
           }}
         />
         <Tabs.Screen
           name="profile"
           options={{
             title: 'Profile',
-            tabBarIcon: ({ size, color }: { size: number; color: string }) => (
-              <User size={size} color={color} strokeWidth={2} />
-            ),
+            tabBarIcon: ({ color }) => <MaterialCommunityIcons name="account" size={24} color={color} />,
           }}
         />
       </Tabs>
