@@ -48,6 +48,7 @@ node_modules/
 # Logs
 *.log
 logs/
+backlog.md
 
 # Local development
 .env

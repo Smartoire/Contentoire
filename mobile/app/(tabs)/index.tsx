@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,23 +9,55 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RefreshCw, Search } from 'lucide-react-native';
+import { RefreshCw } from 'lucide-react-native';
+import { NewsHeader } from '@/components/NewsHeader';
 import { NewsCard } from '@/components/NewsCard';
 import { SearchInput } from '@/components/SearchInput';
 import { newsService } from '@/services/newsService';
-import { NewsItem } from '@/types/news';
+import { NewsItem, ScheduledPost } from '@/types/news';
+
+type NewsItemWithStatus = NewsItem & {
+  status: 'draft' | 'posted' | 'deleted';
+  suggestedPublishTime?: string;
+  media: {
+    name: string;
+    logo: string;
+  };
+};
 
 export default function HomeScreen() {
-  const [news, setNews] = useState<NewsItem[]>([]);
+  const [news, setNews] = useState<NewsItemWithStatus[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchKeyword, setSearchKeyword] = useState('technology');
+  const [searchKeyword, setSearchKeyword] = useState('All');
+  const [currentMedia, setCurrentMedia] = useState<'all' | 'twitter' | 'facebook' | 'instagram' | 'linkedin'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchNews = async () => {
+  const fetchNews = async (keyword?: string, query?: string) => {
     try {
       setLoading(true);
-      const articles = await newsService.fetchNewsByKeyword(searchKeyword);
-      setNews(articles);
+      const searchTerm = query || keyword || searchKeyword;
+      const articles = await newsService.fetchNewsByKeyword(searchTerm);
+      
+      // Transform articles to include required fields for NewsCard
+      let transformedArticles: NewsItemWithStatus[] = articles.map(article => ({
+        ...article,
+        status: 'draft' as const,
+        suggestedPublishTime: new Date(Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+        media: {
+          name: 'Twitter',
+          logo: 'twitter',
+        },
+      }));
+
+      // Filter by media type if not 'all'
+      if (currentMedia !== 'all') {
+        transformedArticles = transformedArticles.filter(
+          article => article.media.name.toLowerCase() === currentMedia
+        );
+      }
+      
+      setNews(transformedArticles);
     } catch (error) {
       Alert.alert('Error', 'Failed to fetch news articles');
     } finally {
@@ -33,50 +65,70 @@ export default function HomeScreen() {
     }
   };
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
-    await fetchNews();
-    setRefreshing(false);
+    fetchNews().finally(() => setRefreshing(false));
+  }, [searchKeyword, currentMedia, searchQuery]);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    fetchNews(undefined, query);
   };
 
-  useEffect(() => {
-    fetchNews();
-  }, [searchKeyword]);
+  const handleKeywordChange = (keyword: string) => {
+    setSearchKeyword(keyword);
+    setSearchQuery('');
+    fetchNews(keyword, '');
+  };
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.titleContainer}>
-        <Text style={styles.title}>News Posts</Text>
-        <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
-          <RefreshCw size={24} color="#007AFF" strokeWidth={2} />
-        </TouchableOpacity>
-      </View>
-      <SearchInput
-        value={searchKeyword}
-        onChangeText={setSearchKeyword}
-        placeholder="Search keywords..."
-      />
-    </View>
-  );
-
-  const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <Search size={48} color="#8E8E93" strokeWidth={1.5} />
-      <Text style={styles.emptyTitle}>No articles found</Text>
-      <Text style={styles.emptySubtitle}>
-        Try searching for different keywords or refresh to get new articles
-      </Text>
-    </View>
-  );
+  const handleMediaChange = (media: 'all' | 'twitter' | 'facebook' | 'instagram' | 'linkedin') => {
+    setCurrentMedia(media);
+    fetchNews(searchKeyword, searchQuery);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
+      <NewsHeader
+        onSearch={handleSearch}
+        onRefresh={onRefresh}
+        onKeywordChange={handleKeywordChange}
+        onMediaChange={handleMediaChange}
+        currentKeyword={searchKeyword}
+        currentMedia={currentMedia}
+        loading={loading}
+      />
+      
       <FlatList
         data={news}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <NewsCard news={item} />}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={!loading ? renderEmptyState : null}
+        renderItem={({ item }) => (
+          <NewsCard 
+            news={item} 
+            onDelete={(id) => {
+              // Filter out the deleted item
+              setNews(prev => prev.filter(item => item.id !== id));
+              // In a real app, you would also update the backend here
+            }}
+            onSubmit={(id) => {
+              // Update the status to 'posted' in the local state
+              setNews(prev => prev.map(item => 
+                item.id === id ? { ...item, status: 'posted' } : item
+              ));
+              // In a real app, you would also update the backend here
+            }}
+          />
+        )}
+        ListEmptyComponent={
+          !loading ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {searchQuery || searchKeyword !== 'All' || currentMedia !== 'all'
+                  ? 'No matching articles found. Try different filters.'
+                  : 'No articles found. Pull to refresh.'}
+              </Text>
+            </View>
+          ) : null
+        }
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -112,6 +164,18 @@ const styles = StyleSheet.create({
   },
   refreshButton: {
     padding: 8,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 20,
   },
   emptyState: {
     flex: 1,

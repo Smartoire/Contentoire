@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "contentoire",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "extra": {
@@ -19,6 +19,7 @@
       "bundleIdentifier": "com.smartoire.contentoire"
     },
     "android": {
+      "edgeToEdgeEnabled": true,
       "package": "com.smartoire.contentoire",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
