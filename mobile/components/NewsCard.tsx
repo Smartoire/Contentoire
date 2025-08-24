@@ -3,110 +3,250 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  Image,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Clock, ExternalLink } from 'lucide-react-native';
+import { Clock } from 'lucide-react-native';
+import { FontAwesome6 } from '@expo/vector-icons';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  runOnJS,
+} from 'react-native-reanimated';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { NewsItem } from '@/types/news';
 
-interface NewsCardProps {
-  news: NewsItem;
+interface NewsItemWithStatus extends NewsItem {
+  status: 'draft' | 'posted' | 'deleted';
+  suggestedPublishTime?: string;
+  media: {
+    name: string;
+    logo: string; // FontAwesome6 icon name
+  };
 }
 
-export function NewsCard({ news }: NewsCardProps) {
+interface NewsCardProps {
+  news: NewsItemWithStatus;
+  onDelete?: (id: string) => void;
+  onSubmit?: (id: string) => void;
+}
+
+const SWIPE_THRESHOLD = 100;
+const SWIPE_VELOCITY_THRESHOLD = 500;
+
+export function NewsCard({ news, onDelete, onSubmit }: NewsCardProps) {
+  const translateX = useSharedValue(0);
+  const isSwiping = useSharedValue(false);
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   const handlePress = () => {
-    router.push({
-      pathname: '/post-detail',
-      params: { id: news.id },
+    if (!isSwiping.value) {
+      router.push({
+        pathname: '/post-detail',
+        params: { id: news.id },
+      });
+    }
+  };
+
+  const handleSwipeLeft = () => {
+    translateX.value = withSpring(-SWIPE_THRESHOLD * 2, {
+      velocity: 0.5,
+      damping: 10,
+    }, () => {
+      runOnJS(handleSubmit)();
+      translateX.value = withSpring(0);
     });
   };
 
-  const formatTimeAgo = (dateString: string) => {
-    const now = new Date();
-    const publishDate = new Date(dateString);
-    const diffInHours = Math.floor((now.getTime() - publishDate.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    return `${Math.floor(diffInHours / 24)}d ago`;
+  const handleSwipeRight = () => {
+    translateX.value = withSpring(SWIPE_THRESHOLD * 2, {
+      velocity: 0.5,
+      damping: 10,
+    }, () => {
+      runOnJS(handleDelete)();
+      translateX.value = withSpring(0);
+    });
   };
 
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Post',
+      'Are you sure you want to delete this post?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => onDelete?.(news.id)
+        },
+      ]
+    );
+  };
+
+  const handleSubmit = () => {
+    Alert.alert(
+      'Submit Post',
+      'Are you ready to submit this post?',
+      [
+        { text: 'Not Now', style: 'cancel' },
+        {
+          text: 'Submit',
+          onPress: () => onSubmit?.(news.id)
+        },
+      ]
+    );
+  };
+
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      isSwiping.value = true;
+    })
+    .onUpdate((e) => {
+      translateX.value = e.translationX;
+    })
+    .onEnd((e) => {
+      if (e.velocityX > SWIPE_VELOCITY_THRESHOLD ||
+        (e.translationX > SWIPE_THRESHOLD && Math.abs(e.velocityX) > 200)) {
+        handleSwipeRight();
+      } else if (e.velocityX < -SWIPE_VELOCITY_THRESHOLD ||
+        (e.translationX < -SWIPE_THRESHOLD && Math.abs(e.velocityX) > 200)) {
+        handleSwipeLeft();
+      } else {
+        translateX.value = withSpring(0, { damping: 10 });
+      }
+      isSwiping.value = false;
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+    backgroundColor: isSwiping.value ? '#F8F8F8' : '#FFFFFF',
+  }));
+
+  // Don't render if status is not draft
+  if (news.status !== 'draft') {
+    return null;
+  }
+
   return (
-    <TouchableOpacity style={styles.card} onPress={handlePress}>
-      <Image source={{ uri: news.imageUrl }} style={styles.image} />
-      
-      <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>
-          {news.title}
-        </Text>
-        
-        <Text style={styles.summary} numberOfLines={2}>
-          {news.summary}
-        </Text>
-        
-        <View style={styles.meta}>
-          <Text style={styles.source}>{news.source}</Text>
-          <View style={styles.timeContainer}>
-            <Clock size={12} color="#8E8E93" strokeWidth={2} />
-            <Text style={styles.time}>{formatTimeAgo(news.publishedAt)}</Text>
-          </View>
-        </View>
+    <View style={styles.swipeContainer}>
+      {/* Delete action background */}
+      <View style={[styles.actionButton, styles.deleteButton]}>
+        <FontAwesome6 name="trash" size={20} color="white" />
       </View>
 
-      <View style={styles.actionIcon}>
-        <ExternalLink size={16} color="#C7C7CC" strokeWidth={2} />
+      {/* Submit action background */}
+      <View style={[styles.actionButton, styles.submitButton]}>
+        <FontAwesome6 name="paper-plane" size={20} color="white" />
       </View>
-    </TouchableOpacity>
+
+      <GestureDetector gesture={panGesture}>
+        <Animated.View style={[styles.card, animatedStyle]}>
+          <View style={styles.content}>
+            <View style={styles.header}>
+              <Text style={styles.title} numberOfLines={1}>
+                {news.title}
+              </Text>
+              <FontAwesome6
+                name={news.media.logo}
+                size={20}
+                color="#8E8E93"
+                style={styles.mediaIcon}
+              />
+            </View>
+
+            <Text style={styles.summary} numberOfLines={2}>
+              {news.summary}
+            </Text>
+
+            <View style={styles.footer}>
+              <Text style={styles.time}>
+                {news.suggestedPublishTime ?
+                  `Suggested: ${formatTime(news.suggestedPublishTime)}` :
+                  'No suggested time'}
+              </Text>
+              <View style={styles.timeContainer}>
+                <Clock size={12} color="#8E8E93" strokeWidth={2} />
+                <Text style={styles.time}>{formatTime(news.publishedAt)}</Text>
+              </View>
+            </View>
+          </View>
+        </Animated.View>
+      </GestureDetector>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  swipeContainer: {
+    position: 'relative',
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  actionButton: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteButton: {
+    right: 0,
+    backgroundColor: '#FF3B30',
+  },
+  submitButton: {
+    left: 0,
+    backgroundColor: '#34C759',
+  },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    marginBottom: 12,
+    padding: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 3,
-    overflow: 'hidden',
-  },
-  image: {
-    width: '100%',
-    height: 180,
-    backgroundColor: '#F0F0F0',
   },
   content: {
-    padding: 16,
+    flex: 1,
   },
-  title: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    lineHeight: 22,
-    marginBottom: 8,
-  },
-  summary: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  meta: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 8,
   },
-  source: {
-    fontSize: 12,
+  title: {
+    flex: 1,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
-    textTransform: 'uppercase',
+    color: '#1C1C1E',
+    marginRight: 12,
+  },
+  mediaIcon: {
+    width: 24,
+    height: 24,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  summary: {
+    fontSize: 14,
+    color: '#636366',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
   },
   timeContainer: {
     flexDirection: 'row',
@@ -116,21 +256,6 @@ const styles = StyleSheet.create({
   time: {
     fontSize: 12,
     color: '#8E8E93',
-  },
-  actionIcon: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    marginLeft: 4,
   },
 });

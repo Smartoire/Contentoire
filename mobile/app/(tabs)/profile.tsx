@@ -9,6 +9,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
+import { authService } from '@/services/authService';
 import Toast from 'react-native-toast-message';
 
 export default function ProfileScreen() {
@@ -18,13 +20,13 @@ export default function ProfileScreen() {
       'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
+        {
+          text: 'Logout',
           style: 'destructive',
           onPress: () => {
             // Handle logout logic here
             // Clear any stored authentication data
-            
+
             // Show success toast
             Toast.show({
               type: 'success',
@@ -33,7 +35,7 @@ export default function ProfileScreen() {
               position: 'top',
               visibilityTime: 2000,
             });
-            
+
             // Navigate to login screen after a short delay
             setTimeout(() => {
               router.replace('/login');
@@ -67,17 +69,32 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Profile</Text>
-        <Text style={styles.subtitle}>Manage your account and preferences</Text>
-      </View>
-
       <View style={styles.userInfo}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>JD</Text>
-        </View>
-        <Text style={styles.userName}>John Doe</Text>
-        <Text style={styles.userEmail}>john.doe@example.com</Text>
+        {authService.getCurrentUser()?.profileImage ? (
+          <Image
+            source={{ uri: authService.getCurrentUser()?.profileImage }}
+            style={styles.profileImage}
+            cachePolicy="memory-disk"
+            transition={200}
+          />
+        ) : (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {authService.getCurrentUser()?.fullName
+                ?.split(' ')
+                .map(n => n[0])
+                .join('')
+                .toUpperCase()
+                .substring(0, 2)}
+            </Text>
+          </View>
+        )}
+        <Text style={styles.userName}>
+          {authService.getCurrentUser()?.fullName || 'Guest User'}
+        </Text>
+        <Text style={styles.userEmail}>
+          {authService.getCurrentUser()?.email || 'No email available'}
+        </Text>
       </View>
 
       <View style={styles.menu}>
@@ -131,12 +148,18 @@ const styles = StyleSheet.create({
     padding: 32,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#007AFF',
-    alignItems: 'center',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#E0E0E0',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     marginBottom: 16,
   },
   avatarText: {

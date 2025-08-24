@@ -3,6 +3,7 @@ import { TextInput } from '@/components/TextInput';
 import { router } from 'expo-router';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import React, { useState, useEffect } from 'react';
+import { authService } from '@/services/authService';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Image,
@@ -17,7 +18,7 @@ import {
   ScrollView,
   Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Screen } from '@/components/Screen';
 import Toast from 'react-native-toast-message';
 import useGoogleAuth from './auth/GoogleAuth';
 import { FontAwesome } from '@expo/vector-icons';
@@ -72,8 +73,12 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Use the auth service to sign in
+      const { user } = await authService.signInWithEmailAndPassword(email, password);
+
+      // Update the user info to trigger the redirect
+      // This will be handled by the useEffect that watches userInfo
+      // The actual navigation will happen in the auth context or a parent component
 
       Toast.show({
         type: 'success',
@@ -82,13 +87,15 @@ export default function LoginScreen() {
       });
 
       // Navigate to the app after successful sign in
+      // This might be redundant if the auth state change already handles navigation
       router.replace('/(tabs)');
     } catch (error) {
       console.error('Error signing in:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in. Please check your credentials and try again.';
       Toast.show({
         type: 'error',
         text1: 'Sign In Failed',
-        text2: 'Failed to sign in. Please check your credentials and try again.',
+        text2: errorMessage,
       });
     } finally {
       setIsLoading(false);
@@ -135,10 +142,11 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <Screen edges={['top']}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardAvoidingView}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         {/* Header with Wave */}
         <View style={styles.header}>
@@ -146,14 +154,14 @@ export default function LoginScreen() {
             colors={['#1a1a1a', '#2d2d2d']}
             style={styles.headerGradient}
           >
-            <SafeAreaView style={styles.safeArea}>
+            <View style={styles.safeArea}>
               <View style={styles.logoContainer}>
                 <Image
                   source={require('../assets/images/logo.png')}
                   style={styles.logoImage}
                 />
               </View>
-            </SafeAreaView>
+            </View>
 
             {/* Wave Shape */}
             <View style={styles.waveContainer}>
@@ -280,10 +288,18 @@ export default function LoginScreen() {
               <Text style={styles.socialTitle}>Sign in with another account</Text>
               <View style={styles.socialIcons}>
                 <TouchableOpacity
-                  style={styles.socialIcon}
-                  onPress={() => handleSocialLogin('Google')}
+                  style={[
+                    styles.socialIcon,
+                    (isGoogleLoading || isLoading) && styles.socialIconDisabled
+                  ]}
+                  onPress={() => handleGoogleSignIn()}
+                  disabled={isGoogleLoading || isLoading}
                 >
-                  <FontAwesome name="google" size={20} color="#DB4437" />
+                  {isGoogleLoading ? (
+                    <ActivityIndicator size="small" color="#DB4437" />
+                  ) : (
+                    <FontAwesome name="google" size={20} color="#DB4437" />
+                  )}
                 </TouchableOpacity>
 
                 {Platform.OS === 'ios' && (
@@ -321,14 +337,17 @@ export default function LoginScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
       <Toast />
-    </SafeAreaView>
+    </Screen>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   header: {
     height: 200,
@@ -497,26 +516,29 @@ const styles = StyleSheet.create({
   },
   socialIcons: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: 16,
+    justifyContent: 'space-between',
+    paddingHorizontal: 5,
+    marginTop: 10,
+    width: '100%',
   },
   socialIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#F8F9FA',
-    alignItems: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E9ECEF',
+    borderColor: '#E0E0E0',
+    marginHorizontal: 2,
   },
-  keyboardAvoidingView: {
-    flex: 1,
+  socialIconDisabled: {
+    opacity: 0.5,
   },
   scrollView: {
     flexGrow: 1,
     padding: 20,
+    backgroundColor: '#FFFFFF',
   },
   logo: {
     width: width * 0.4,
