@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, TextInput, Text } from 'react-native';
-import { Search, RefreshCw, X } from 'lucide-react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { PlatformSelector } from './PlatformSelector';
 
@@ -57,7 +56,7 @@ export const NewsHeader = ({
             autoFocus
           />
           <TouchableOpacity onPress={() => setShowSearch(false)} style={styles.iconButton}>
-            <X size={20} color="#666" />
+            <MaterialCommunityIcons name="close" size={20} color="#666" />
           </TouchableOpacity>
         </View>
       ) : (
@@ -83,14 +82,14 @@ export const NewsHeader = ({
               style={styles.iconButton}
               onPress={() => setShowSearch(true)}
             >
-              <Search size={24} color="#007AFF" />
+              <MaterialCommunityIcons name="magnify" size={24} color="#007AFF" />
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.iconButton, loading && styles.refreshing]}
               onPress={onRefresh}
               disabled={loading}
             >
-              <RefreshCw size={20} color={loading ? '#999' : '#007AFF'} />
+              <MaterialCommunityIcons name="refresh" size={20} color={loading ? '#999' : '#007AFF'} />
             </TouchableOpacity>
           </View>
         </View>

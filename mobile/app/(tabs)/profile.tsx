@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Bell, CircleHelp as HelpCircle, LogOut, Shield } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import {
   Alert,
@@ -46,23 +46,28 @@ export default function ProfileScreen() {
     );
   };
 
-  const menuItems = [
+  const menuItems: Array<{
+    title: string;
+    subtitle: string;
+    icon: keyof typeof MaterialCommunityIcons.glyphMap;
+    onPress: () => void;
+  }> = [
     {
-      icon: Bell,
       title: 'Notifications',
-      subtitle: 'Manage your notification preferences',
+      subtitle: 'Manage your notifications',
+      icon: 'bell-outline',
       onPress: () => Alert.alert('Coming Soon', 'Notifications settings'),
     },
     {
-      icon: Shield,
-      title: 'Privacy & Security',
-      subtitle: 'Control your privacy settings',
+      title: 'Privacy',
+      subtitle: 'Manage your privacy settings',
+      icon: 'shield-account',
       onPress: () => Alert.alert('Coming Soon', 'Privacy settings'),
     },
     {
-      icon: HelpCircle,
       title: 'Help & Support',
       subtitle: 'Get help and contact support',
+      icon: 'help-circle-outline',
       onPress: () => Alert.alert('Coming Soon', 'Help center'),
     },
   ];
@@ -105,7 +110,7 @@ export default function ProfileScreen() {
             onPress={item.onPress}
           >
             <View style={styles.menuItemIcon}>
-              <item.icon size={24} color="#007AFF" strokeWidth={2} />
+              <MaterialCommunityIcons name={item.icon} size={24} color="#007AFF" />
             </View>
             <View style={styles.menuItemContent}>
               <Text style={styles.menuItemTitle}>{item.title}</Text>
@@ -116,7 +121,7 @@ export default function ProfileScreen() {
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <LogOut size={20} color="#FF3B30" strokeWidth={2} />
+        <MaterialCommunityIcons name="logout" size={20} color="#FF3B30" />
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
     </SafeAreaView>

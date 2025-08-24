@@ -1,29 +1,57 @@
-import Svg, { Path } from 'react-native-svg';
-import { TextInput } from '@/components/TextInput';
+import { StyleSheet, View, Text, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, Keyboard, useColorScheme as useDeviceColorScheme, StatusBar, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
-import React, { useState, useEffect } from 'react';
-import { authService } from '@/services/authService';
+import { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
-import {
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  ActivityIndicator,
-  Keyboard,
-  ScrollView,
-  Dimensions,
-} from 'react-native';
-import { Screen } from '@/components/Screen';
+import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
-import useGoogleAuth from './auth/GoogleAuth';
-import { FontAwesome } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
+import { authService } from '@/services/authService';
 
-const { width } = Dimensions.get('window');
+import { Screen } from '@/components/Screen';
+import { TextInput } from '@/components/TextInput';
+import { getTheme } from '@/constants/theme';
+import { scale, verticalScale } from '@/utils/styling';
+import useGoogleAuth from './auth/GoogleAuth';
+
+// Use theme colors and scaling
+const useTheme = () => {
+  const deviceColorScheme = useDeviceColorScheme();
+  const [colorScheme, setColorScheme] = useState<'light' | 'dark' | null>(null);
+
+  // Initialize with device color scheme
+  useEffect(() => {
+    if (colorScheme === null && deviceColorScheme) {
+      setColorScheme(deviceColorScheme);
+    }
+  }, [deviceColorScheme]);
+
+  const toggleColorScheme = () => {
+    setColorScheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  return {
+    ...getTheme(colorScheme || deviceColorScheme || 'light'),
+    colorScheme,
+    toggleColorScheme,
+  };
+};
+
+// Types
+type User = {
+  email: string;
+  id?: string;
+  name?: string;
+};
+
+type AuthResponse = {
+  user: User;
+  token?: string;
+};
+
+type AuthError = {
+  code: string;
+  message: string;
+};
 
 export default function LoginScreen() {
   // Form state
@@ -32,10 +60,23 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeIcon, setActiveIcon] = useState<string | null>(null);
+  const theme = useTheme();
+  const colors = theme.colors;
+  const isDarkMode = theme.colorScheme === 'dark';
 
-  // Google Auth
+  // Common colors with proper type safety
+  const commonColors = {
+    white: '#FFFFFF',
+    googleRed: '#DB4437',
+    googleButtonBg: isDarkMode ? colors.gray800 : '#FFFFFF', // Using direct hex for white
+    googleButtonBorder: isDarkMode ? colors.gray700 : colors.gray200,
+    googleButtonText: isDarkMode ? '#FFFFFF' : colors.gray900, // Using direct hex for white
+  };
+
+  // Google Auth hook
   const {
-    isLoading: isGoogleLoading,
+    isLoading: isGoogleAuthLoading,
     userInfo,
     authError,
     handleGoogleSignIn,
@@ -67,34 +108,53 @@ export default function LoginScreen() {
 
   // Handle email/password sign in
   const handleSignIn = async () => {
-    if (!isFormValid) return;
+    if (!isFormValid) {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'Please enter a valid email and password (min 8 characters)',
+      });
+      return;
+    }
 
     Keyboard.dismiss();
     setIsLoading(true);
 
     try {
-      // Use the auth service to sign in
       const { user } = await authService.signInWithEmailAndPassword(email, password);
 
-      // Update the user info to trigger the redirect
-      // This will be handled by the useEffect that watches userInfo
-      // The actual navigation will happen in the auth context or a parent component
-
+      // Handle successful login
       Toast.show({
         type: 'success',
-        text1: 'Success',
-        text2: 'Signed in successfully!',
+        text1: 'Welcome Back!',
+        text2: `Signed in as ${user.email}`,
       });
 
-      // Navigate to the app after successful sign in
-      // This might be redundant if the auth state change already handles navigation
+      // Navigate to the main app
       router.replace('/(tabs)');
     } catch (error) {
-      console.error('Error signing in:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in. Please check your credentials and try again.';
+      console.error('Login error:', error);
+
+      let errorMessage = 'Failed to sign in. Please try again.';
+
+      if (typeof error === 'object' && error !== null && 'code' in error) {
+        const authError = error as AuthError;
+        switch (authError.code) {
+          case 'auth/invalid-credentials':
+            errorMessage = 'Invalid email or password';
+            break;
+          case 'auth/too-many-requests':
+            errorMessage = 'Too many login attempts. Please try again later.';
+            break;
+          case 'auth/network-request-failed':
+            errorMessage = 'Network error. Please check your connection.';
+            break;
+        }
+      }
+
       Toast.show({
         type: 'error',
-        text1: 'Sign In Failed',
+        text1: 'Login Failed',
         text2: errorMessage,
       });
     } finally {
@@ -104,14 +164,32 @@ export default function LoginScreen() {
 
   // Handle Google Sign In
   const handleGoogleSignInPress = async () => {
+    if (isGoogleAuthLoading) return;
+
     try {
       await handleGoogleSignIn();
+
+      // The success toast and navigation will be handled by the auth context
+      // or by the useEffect that watches userInfo
+
+      throw new Error('No user data returned from Google');
     } catch (error) {
-      console.error('Error during Google sign in:', error);
+      console.error('Google sign-in error:', error);
+
+      let errorMessage = 'Failed to sign in with Google. Please try again.';
+
+      if (error instanceof Error) {
+        if (error.message.includes('canceled')) {
+          errorMessage = 'Google sign in was canceled';
+        } else if (error.message.includes('network')) {
+          errorMessage = 'Network error. Please check your connection.';
+        }
+      }
+
       Toast.show({
         type: 'error',
         text1: 'Google Sign In Failed',
-        text2: 'Failed to sign in with Google. Please try again.',
+        text2: errorMessage,
       });
     }
   };
@@ -141,66 +219,333 @@ export default function LoginScreen() {
     setShowPassword(!showPassword);
   };
 
+  // Create styles with theme colors
+  const styles = StyleSheet.create({
+    // Base container styles
+    line: {
+      flex: 1,
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.border || colors.gray300,
+    },
+    keyboardAvoidingView: {
+      flex: 1,
+    },
+    contentContainer: {
+      flexGrow: 1,
+      paddingBottom: verticalScale(30),
+    },
+    header: {
+      height: verticalScale(150),
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden',
+      marginTop: Platform.OS === 'android' ? -(StatusBar.currentHeight || 0) : 0,
+    },
+    themeToggle: {
+      position: 'absolute',
+      top: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + scale(10) : scale(40),
+      right: scale(15),
+      padding: scale(3),
+      borderRadius: scale(10),
+      backgroundColor: colors.backgroundElevated,
+      zIndex: 10,
+    },
+    headerGradient: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: '100%',
+    },
+    safeArea: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: '100%',
+    },
+    waveContainer: {
+      width: '100%',
+      backgroundColor: colors.backgroundInverse,
+      marginTop: -1,
+    },
+    logo: {
+      width: scale(350),
+    },
+    formContainer: {
+      paddingHorizontal: scale(24),
+      width: '100%',
+      alignItems: 'center',
+    },
+    welcomeSection: {
+      marginTop: verticalScale(-40),
+      width: '80%',
+      borderRadius: scale(40),
+      backgroundColor: colors.backgroundElevated,
+      marginBottom: verticalScale(32),
+      alignItems: 'center',
+    },
+    welcomeTitle: {
+      fontSize: scale(24),
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: verticalScale(5),
+    },
+    inputSection: {
+      width: '100%',
+      marginBottom: verticalScale(24),
+    },
+    inputContainer: {
+      marginBottom: verticalScale(20),
+    },
+    inputWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.backgroundElevated,
+      borderRadius: scale(12),
+      paddingHorizontal: scale(12),
+      height: verticalScale(56),
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    input: {
+      flex: 1,
+      height: verticalScale(56),
+      fontSize: scale(16),
+      color: colors.text,
+      paddingHorizontal: scale(12),
+    },
+    optionsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    rememberMe: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    radioButton: {
+      width: scale(18),
+      height: scale(18),
+      borderRadius: scale(9),
+      borderWidth: 1.5,
+      borderColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: scale(8),
+    },
+    radioInner: {
+      width: scale(10),
+      height: scale(10),
+      borderRadius: scale(5),
+      backgroundColor: colors.primary,
+    },
+    rememberText: {
+      fontSize: scale(14),
+      color: colors.textSecondary,
+    },
+    forgotPassword: {
+      fontSize: scale(14),
+      color: colors.primary,
+      fontWeight: '500',
+      alignSelf: 'flex-end',
+      marginTop: verticalScale(10),
+      marginBottom: verticalScale(20),
+    },
+    loginButton: {
+      marginBottom: verticalScale(24),
+      borderRadius: scale(24),
+      width: '90%',
+      overflow: 'hidden',
+    },
+    loginButtonDisabled: {
+      opacity: 0.6,
+    },
+    buttonGradient: {
+      paddingVertical: verticalScale(16),
+      alignItems: 'center',
+      borderRadius: scale(12),
+    },
+    buttonText: {
+      color: colors.textInverse || '#fff',
+      fontSize: scale(16),
+      fontWeight: '600',
+    },
+    signUpContainer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: verticalScale(16),
+    },
+    signUpText: {
+      fontSize: scale(14),
+      color: colors.textSecondary,
+    },
+    signUpLink: {
+      fontSize: scale(14),
+      color: colors.primary,
+      fontWeight: '600',
+      marginLeft: scale(4),
+    },
+    googleButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: commonColors.googleButtonBg,
+      borderWidth: 1,
+      borderColor: commonColors.googleButtonBorder,
+      padding: 14,
+      borderRadius: 8,
+    },
+    googleIcon: {
+      width: 24,
+      height: 24,
+      marginRight: 12,
+    },
+    googleButtonText: {
+      color: commonColors.googleButtonText,
+      fontSize: 16,
+      fontWeight: '500',
+    },
+    footer: {
+      marginTop: 24,
+      alignItems: 'center',
+    },
+    footerText: {
+      color: colors.primary,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    checkmark: {
+      width: scale(20),
+      height: scale(20),
+      borderRadius: 10,
+      backgroundColor: colors.success,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    checkmarkIcon: {
+      color: commonColors.white,
+    },
+    divider: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginVertical: verticalScale(24),
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: '#E9ECEF',
+    },
+    dividerText: {
+      marginHorizontal: 16,
+      fontSize: 14,
+      color: '#8E8E93',
+      fontWeight: '500',
+    },
+    socialSection: {
+      alignItems: 'center',
+    },
+    socialTitle: {
+      fontSize: 14,
+      color: '#8E8E93',
+      marginBottom: 16,
+    },
+    socialIcons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingHorizontal: 5,
+      marginTop: 10,
+      width: '100%',
+    },
+    socialIcon: {
+      width: scale(44),
+      height: scale(44),
+      borderRadius: scale(22),
+      backgroundColor: '#F5F5F5',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+      marginHorizontal: 2,
+    },
+    socialIconDisabled: {
+      opacity: 0.5,
+    },
+  });
+
   return (
-    <Screen edges={['top']}>
+    <Screen backgroundColor={colors.background}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        translucent={false}
+      />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardAvoidingView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : StatusBar.currentHeight}
       >
-        {/* Header with Wave */}
-        <View style={styles.header}>
-          <LinearGradient
-            colors={['#1a1a1a', '#2d2d2d']}
-            style={styles.headerGradient}
-          >
-            <View style={styles.safeArea}>
-              <View style={styles.logoContainer}>
+        <ScrollView
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header with Wave */}
+          <View style={styles.header}>
+            <LinearGradient
+              colors={[colors.background, colors.backgroundInverse]}
+              style={styles.headerGradient}
+            >
+              <View style={styles.safeArea}>
+                <TouchableOpacity
+                  onPress={theme.toggleColorScheme}
+                  style={styles.themeToggle}
+                  accessibilityLabel="Toggle dark/light mode"
+                >
+                  <MaterialCommunityIcons
+                    name={isDarkMode ? 'weather-sunny' : 'weather-night'}
+                    size={scale(16)}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
                 <Image
-                  source={require('../assets/images/logo.png')}
-                  style={styles.logoImage}
+                  source={require('@/assets/images/logo.png')}
+                  style={styles.logo}
+                  resizeMode="contain"
                 />
               </View>
-            </View>
+            </LinearGradient>
+          </View>
 
-            {/* Wave Shape */}
-            <View style={styles.waveContainer}>
-              <Svg height="60" width="100%" viewBox="0 0 400 60" style={styles.wave}>
-                <Path
-                  d="M0,30 Q100,10 200,30 T400,30 L400,60 L0,60 Z"
-                  fill="#FFFFFF"
-                />
-              </Svg>
-            </View>
-          </LinearGradient>
-        </View>
-        <ScrollView
-          contentContainerStyle={styles.scrollView}
-          keyboardShouldPersistTaps="handled"
-        >
+          {/* Wave Shape */}
+          <View style={styles.waveContainer}>
+            <Svg height="60" width="100%" viewBox="0 0 400 60">
+              <Path
+                d="M0,30 Q100,10 200,30 T400,30 L400,60 L0,60 Z"
+                fill={colors.background}
+              />
+            </Svg>
+          </View>
+
           <View style={styles.formContainer}>
             {/* Welcome Title */}
             <View style={styles.welcomeSection}>
-              <Text style={styles.welcomeTitle}>Welcome back !</Text>
+              <Text style={styles.welcomeTitle}>Welcome back!</Text>
             </View>
 
             {/* Input Fields */}
             <View style={styles.inputSection}>
-              {/* Username Input */}
+              {/* Email Input */}
               <View style={styles.inputContainer}>
                 <View style={styles.inputWrapper}>
                   <View style={{ flex: 1 }}>
                     <TextInput
-                      leftIcon={<Mail size={20} color="#8E8E93" />}
-                      rightIcon={email.trim() && (
+                      leftIcon={<MaterialCommunityIcons name="email-outline" size={20} color={colors.textSecondary} />}
+                      rightIcon={email.trim() ? (
                         <View style={styles.checkmark}>
-                          <FontAwesome name="check" size={12} color="#4CAF50" />
+                          <FontAwesome name="check" size={12} style={styles.checkmarkIcon} />
                         </View>
-                      )}
+                      ) : undefined}
                       value={email}
                       onChangeText={setEmail}
                       placeholder="Username"
-                      placeholderTextColor="#8E8E93"
+                      placeholderTextColor={colors.textSecondary}
                       autoCapitalize="none"
                       keyboardType="email-address"
                     />
@@ -213,23 +558,24 @@ export default function LoginScreen() {
                 <View style={styles.inputWrapper}>
                   <View style={{ flex: 1 }}>
                     <TextInput
-                      leftIcon={<Lock size={20} color="#8E8E93" />}
+                      leftIcon={<MaterialCommunityIcons name="lock-outline" size={20} color={colors.textSecondary} />}
                       value={password}
                       onChangeText={setPassword}
                       placeholder="Password"
                       secureTextEntry={!showPassword}
-                      placeholderTextColor="#8E8E93"
+                      placeholderTextColor={colors.textSecondary}
                       autoCapitalize="none"
                     />
                   </View>
                   <TouchableOpacity
                     onPress={() => setShowPassword(!showPassword)}
                   >
-                    {showPassword ? (
-                      <EyeOff size={20} color="#8E8E93" />
-                    ) : (
-                      <Eye size={20} color="#8E8E93" />
-                    )}
+                    <MaterialCommunityIcons
+                      name={showPassword ? 'eye-off' : 'eye'}
+                      size={scale(20)}
+                      color={colors.textSecondary}
+                      style={{ paddingLeft: scale(8) }}
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -251,19 +597,23 @@ export default function LoginScreen() {
 
             {/* Login Button */}
             <TouchableOpacity
+              onPress={handleSignIn}
               style={[
                 styles.loginButton,
                 !isFormValid && styles.loginButtonDisabled,
               ]}
-              onPress={handleSignIn}
-              disabled={!isFormValid || isLoading}
             >
               <LinearGradient
-                colors={['#F7955D', '#FFA500']}
-                style={styles.buttonGradient}
+                colors={[colors.primary, colors.primaryLight]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[
+                  styles.buttonGradient,
+                  (!isFormValid || isLoading) && styles.loginButtonDisabled,
+                ]}
               >
-                <Text style={styles.loginButtonText}>
-                  {isLoading ? 'Signing In...' : 'Login'}
+                <Text style={styles.buttonText}>
+                  {isLoading ? 'Signing in...' : 'Sign In'}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -275,14 +625,11 @@ export default function LoginScreen() {
                 <Text style={styles.signUpLink}>Sign Up</Text>
               </TouchableOpacity>
             </View>
-
-            {/* Divider */}
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerText}>OR</Text>
               <View style={styles.dividerLine} />
             </View>
-
             {/* Social Login */}
             <View style={styles.socialSection}>
               <Text style={styles.socialTitle}>Sign in with another account</Text>
@@ -290,15 +637,15 @@ export default function LoginScreen() {
                 <TouchableOpacity
                   style={[
                     styles.socialIcon,
-                    (isGoogleLoading || isLoading) && styles.socialIconDisabled
+                    (isGoogleAuthLoading || isLoading) && styles.socialIconDisabled
                   ]}
                   onPress={() => handleGoogleSignIn()}
-                  disabled={isGoogleLoading || isLoading}
+                  disabled={isGoogleAuthLoading || isLoading}
                 >
-                  {isGoogleLoading ? (
-                    <ActivityIndicator size="small" color="#DB4437" />
+                  {isGoogleAuthLoading ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
                   ) : (
-                    <FontAwesome name="google" size={20} color="#DB4437" />
+                    <FontAwesome name="google" size={20} color={colors.primary} />
                   )}
                 </TouchableOpacity>
 
@@ -307,7 +654,7 @@ export default function LoginScreen() {
                     style={styles.socialIcon}
                     onPress={() => handleSocialLogin('Apple')}
                   >
-                    <FontAwesome name="apple" size={20} color="#000000" />
+                    <FontAwesome name="apple" size={20} color={colors.textSecondary} />
                   </TouchableOpacity>
                 )}
 
@@ -315,313 +662,27 @@ export default function LoginScreen() {
                   style={styles.socialIcon}
                   onPress={() => handleSocialLogin('LinkedIn')}
                 >
-                  <FontAwesome name="linkedin" size={20} color="#0A66C2" />
+                  <FontAwesome name="linkedin" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.socialIcon}
                   onPress={() => handleSocialLogin('Facebook')}
                 >
-                  <FontAwesome name="facebook" size={20} color="#1877F2" />
+                  <FontAwesome name="facebook" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.socialIcon}
                   onPress={() => handleSocialLogin('X')}
                 >
-                  <FontAwesome name="twitter" size={20} color="#000000" />
+                  <FontAwesome name="twitter" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
-            </View>
-          </View>
+            </View>          </View>
         </ScrollView>
       </KeyboardAvoidingView>
       <Toast />
     </Screen>
   );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  header: {
-    height: 200,
-  },
-  headerGradient: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoContainer: {
-    alignItems: 'center',
-  },
-  logoImage: {
-    width: 300,
-    height: 100,
-    resizeMode: 'contain',
-    marginBottom: 12,
-  },
-  waveContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  wave: {
-    position: 'absolute',
-    bottom: 0,
-  },
-  content: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  formContainer: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 10,
-  },
-  welcomeSection: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  welcomeTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-  },
-  inputSection: {
-    marginBottom: 32,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  checkmark: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#E8F5E8',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  rememberMe: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  radioButton: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: '#F7955D',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  radioInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#F7955D',
-  },
-  rememberText: {
-    fontSize: 14,
-    color: '#8E8E93',
-  },
-  forgotPassword: {
-    fontSize: 14,
-    color: '#F7955D',
-    fontWeight: '500',
-  },
-  loginButton: {
-    marginBottom: 24,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  loginButtonDisabled: {
-    opacity: 0.6,
-  },
-  buttonGradient: {
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  loginButtonText: {
-    color: '#1a1a1a',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  signUpContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 32,
-  },
-  signUpText: {
-    fontSize: 14,
-    color: '#8E8E93',
-  },
-  signUpLink: {
-    fontSize: 14,
-    color: '#F7955D',
-    fontWeight: '500',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E9ECEF',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    fontSize: 14,
-    color: '#8E8E93',
-    fontWeight: '500',
-  },
-  socialSection: {
-    alignItems: 'center',
-  },
-  socialTitle: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginBottom: 16,
-  },
-  socialIcons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 5,
-    marginTop: 10,
-    width: '100%',
-  },
-  socialIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    marginHorizontal: 2,
-  },
-  socialIconDisabled: {
-    opacity: 0.5,
-  },
-  scrollView: {
-    flexGrow: 1,
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-  },
-  logo: {
-    width: width * 0.4,
-    height: width * 0.4,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 30,
-    textAlign: 'center',
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    height: 48,
-    fontSize: 16,
-    color: '#333',
-  },
-  passwordInput: {
-    paddingRight: 40,
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: 12,
-    padding: 10,
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    padding: 14,
-    borderRadius: 8,
-  },
-  googleIcon: {
-    width: 20,
-    height: 20,
-    marginRight: 12,
-  },
-  googleButtonText: {
-    color: '#333',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  footer: {
-    marginTop: 24,
-    alignItems: 'center',
-  },
-  footerText: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-});
+}

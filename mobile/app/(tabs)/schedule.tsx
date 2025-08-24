@@ -8,7 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Calendar, Clock, Send } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { TextInput } from '@/components/TextInput';
 import { PlatformSelector } from '@/components/PlatformSelector';
 import { DateTimeSelector } from '@/components/DateTimeSelector';
@@ -101,7 +101,7 @@ export default function ScheduleScreen() {
           onPress={handleSchedulePost}
           disabled={!isFormValid || isScheduling}
         >
-          <Send size={20} color="#FFFFFF" strokeWidth={2} />
+          <MaterialCommunityIcons name="calendar" size={20} color="#8E8E93" />
           <Text style={styles.scheduleButtonText}>
             {isScheduling ? 'Scheduling...' : 'Schedule Post'}
           </Text>

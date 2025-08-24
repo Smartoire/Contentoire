@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Calendar, ExternalLink, Share } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function PostDetailScreen() {
   const params = useLocalSearchParams();
@@ -65,11 +65,11 @@ export default function PostDetailScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <ArrowLeft size={24} color="#007AFF" strokeWidth={2} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Article Details</Text>
         <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-          <Share size={24} color="#007AFF" strokeWidth={2} />
+          <MaterialCommunityIcons name="share-variant" size={24} color="#007AFF" />
         </TouchableOpacity>
       </View>
 
@@ -91,7 +91,7 @@ export default function PostDetailScreen() {
           <Text style={styles.content}>{post.content}</Text>
 
           <TouchableOpacity style={styles.sourceLink} onPress={handleOpenSource}>
-            <ExternalLink size={16} color="#007AFF" strokeWidth={2} />
+            <MaterialCommunityIcons name="open-in-new" size={20} color="#007AFF" />
             <Text style={styles.sourceLinkText}>Read Full Article</Text>
           </TouchableOpacity>
         </View>
@@ -103,7 +103,7 @@ export default function PostDetailScreen() {
           onPress={handleSchedulePost}
           disabled={isScheduling}
         >
-          <Calendar size={20} color="#FFFFFF" strokeWidth={2} />
+          <MaterialCommunityIcons name="calendar" size={20} color="#FFFFFF" />
           <Text style={styles.scheduleButtonText}>
             {isScheduling ? 'Loading...' : 'Schedule Post'}
           </Text>

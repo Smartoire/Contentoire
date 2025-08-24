@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Search } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { TextInput } from './TextInput';
 
 interface SearchInputProps {
@@ -16,7 +16,7 @@ export function SearchInput({ value, onChangeText, placeholder }: SearchInputPro
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        leftIcon={<Search size={20} color="#8E8E93" strokeWidth={2} />}
+        leftIcon={<MaterialCommunityIcons name="magnify" size={20} color="#8E8E93" />}
         style={styles.input}
       />
     </View>

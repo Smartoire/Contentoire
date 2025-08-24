@@ -6,8 +6,7 @@ import {
   Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Clock } from 'lucide-react-native';
-import { FontAwesome6 } from '@expo/vector-icons';
+import { MaterialCommunityIcons, FontAwesome6 } from '@expo/vector-icons';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -170,7 +169,7 @@ export function NewsCard({ news, onDelete, onSubmit }: NewsCardProps) {
                   'No suggested time'}
               </Text>
               <View style={styles.timeContainer}>
-                <Clock size={12} color="#8E8E93" strokeWidth={2} />
+                <MaterialCommunityIcons name="clock-outline" size={14} color="#666" />
                 <Text style={styles.time}>{formatTime(news.publishedAt)}</Text>
               </View>
             </View>
