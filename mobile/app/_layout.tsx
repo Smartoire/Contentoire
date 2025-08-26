@@ -1,9 +1,9 @@
-import { useFrameworkReady } from '@/hooks/useFrameworkReady';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet } from 'react-native';
-import Toast from 'react-native-toast-message';
+import { useFrameworkReady } from "@/hooks/useFrameworkReady";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { StyleSheet } from "react-native";
+import Toast from "react-native-toast-message";
 
 export default function RootLayout() {
   useFrameworkReady();

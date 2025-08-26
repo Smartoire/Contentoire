@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { makeRedirectUri } from 'expo-auth-session';
@@ -92,7 +92,7 @@ export const useGoogleAuth = (): GoogleAuthResult => {
   }, []);
 
   // Configure Google OAuth
-  const authConfig = {
+  const authConfig = useMemo(() => ({
     clientId: CLIENT_IDS.expo,
     iosClientId: CLIENT_IDS.ios,
     androidClientId: CLIENT_IDS.android,
@@ -117,22 +117,28 @@ export const useGoogleAuth = (): GoogleAuthResult => {
         redirectUri: 'contentoire://auth'
       }
     ),
-  };
-
-  logger.debug('Initializing Google Auth with config:', {
-    ...authConfig,
-    clientId: authConfig.clientId ? '***' : 'MISSING',
-    iosClientId: authConfig.iosClientId ? '***' : 'MISSING',
-    androidClientId: authConfig.androidClientId ? '***' : 'MISSING',
-    webClientId: authConfig.webClientId ? '***' : 'MISSING',
-  });
+  }), [CLIENT_IDS.expo, CLIENT_IDS.ios, CLIENT_IDS.android, CLIENT_IDS.web]);
 
   const [request, response, promptAsync] = Google.useAuthRequest(authConfig);
 
-  if (!promptAsync) {
-    logger.error('Google auth request initialization failed');
-    throw new Error('Failed to initialize Google authentication');
-  }
+  const handleGoogleSignIn = useCallback(async () => {
+    if (!promptAsync) {
+      logger.error('Google auth request initialization failed');
+      setAuthError('Failed to initialize Google authentication');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setAuthError(null);
+      await promptAsync();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      logger.error('Google sign-in error:', errorMessage);
+      setAuthError(errorMessage);
+      setIsLoading(false);
+    }
+  }, [promptAsync]);
 
   // Check if user is already authenticated on app load
   useEffect(() => {
@@ -157,8 +163,10 @@ export const useGoogleAuth = (): GoogleAuthResult => {
 
   // Handle Google OAuth response
   useEffect(() => {
+    let isMounted = true;
+
     const handleAuthResponse = async () => {
-      if (!response) return;
+      if (!response || !isMounted) return;
 
       logger.debug('Received auth response:', {
         type: response.type,
@@ -238,12 +246,11 @@ export const useGoogleAuth = (): GoogleAuthResult => {
             stack: error instanceof Error ? error.stack : undefined
           });
 
-          Alert.alert(
-            'Authentication Error',
-            errorMessage
-          );
-        } finally {
-          setIsLoading(false);
+          logger.error('Error processing authentication:', error);
+          if (isMounted) {
+            setAuthError(error instanceof Error ? error.message : 'Authentication failed');
+            setIsLoading(false);
+          }
         }
       } else if (response.type === 'error') {
         logger.error('Authentication error:', response.error);
@@ -257,25 +264,12 @@ export const useGoogleAuth = (): GoogleAuthResult => {
     if (response) {
       handleAuthResponse();
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [response]);
 
-  // Handle Google Sign In button press
-  const handleGoogleSignIn = useCallback(async () => {
-    try {
-      await promptAsync();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to start Google sign in';
-      logger.error('Error during Google sign in:', {
-        error: errorMessage,
-        stack: error instanceof Error ? error.stack : undefined
-      });
-
-      Alert.alert(
-        'Error',
-        'Failed to start Google sign in. Please try again.'
-      );
-    }
-  }, [promptAsync]);
 
   if (!promptAsync) {
     return {
