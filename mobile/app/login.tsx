@@ -1,78 +1,40 @@
-import { StyleSheet, View, Text, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, Keyboard, useColorScheme as useDeviceColorScheme, StatusBar, ActivityIndicator } from 'react-native';
-import { router } from 'expo-router';
-import { useState, useEffect } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
-import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
-import Toast from 'react-native-toast-message';
-import Svg, { Path } from 'react-native-svg';
-import { authService } from '@/services/authService';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Keyboard,
+  useColorScheme,
+  StatusBar,
+  ActivityIndicator,
+} from "react-native";
+import { router } from "expo-router";
+import { useState, useEffect } from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import { FontAwesome, MaterialCommunityIcons } from "@expo/vector-icons";
+import Toast from "react-native-toast-message";
+import Svg, { Path } from "react-native-svg";
+import { authService } from "@/services/authService";
 
-import { Screen } from '@/components/Screen';
-import { TextInput } from '@/components/TextInput';
-import { getTheme } from '@/constants/theme';
-import { scale, verticalScale } from '@/utils/styling';
-import useGoogleAuth from './auth/GoogleAuth';
-
-// Use theme colors and scaling
-const useTheme = () => {
-  const deviceColorScheme = useDeviceColorScheme();
-  const [colorScheme, setColorScheme] = useState<'light' | 'dark' | null>(null);
-
-  // Initialize with device color scheme
-  useEffect(() => {
-    if (colorScheme === null && deviceColorScheme) {
-      setColorScheme(deviceColorScheme);
-    }
-  }, [deviceColorScheme]);
-
-  const toggleColorScheme = () => {
-    setColorScheme(prev => prev === 'dark' ? 'light' : 'dark');
-  };
-
-  return {
-    ...getTheme(colorScheme || deviceColorScheme || 'light'),
-    colorScheme,
-    toggleColorScheme,
-  };
-};
-
-// Types
-type User = {
-  email: string;
-  id?: string;
-  name?: string;
-};
-
-type AuthResponse = {
-  user: User;
-  token?: string;
-};
-
-type AuthError = {
-  code: string;
-  message: string;
-};
+import { Screen } from "@/components/Screen";
+import { TextInput } from "@/components/TextInput";
+import { theme, isDarkMode, colors } from "@/constants/theme";
+import { scale, verticalScale } from "@/utils/styling";
+import useGoogleAuth from "@/app/auth/GoogleAuth";
+import { AuthError } from "@/types";
 
 export default function LoginScreen() {
   // Form state
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeIcon, setActiveIcon] = useState<string | null>(null);
-  const theme = useTheme();
-  const colors = theme.colors;
-  const isDarkMode = theme.colorScheme === 'dark';
-
-  // Common colors with proper type safety
-  const commonColors = {
-    white: '#FFFFFF',
-    googleRed: '#DB4437',
-    googleButtonBg: isDarkMode ? colors.gray800 : '#FFFFFF', // Using direct hex for white
-    googleButtonBorder: isDarkMode ? colors.gray700 : colors.gray200,
-    googleButtonText: isDarkMode ? '#FFFFFF' : colors.gray900, // Using direct hex for white
-  };
 
   // Google Auth hook
   const {
@@ -80,15 +42,15 @@ export default function LoginScreen() {
     userInfo,
     authError,
     handleGoogleSignIn,
-    handleSignOut
+    handleSignOut,
   } = useGoogleAuth();
 
   // Show auth error if any
   useEffect(() => {
     if (authError) {
       Toast.show({
-        type: 'error',
-        text1: 'Authentication Error',
+        type: "error",
+        text1: "Authentication Error",
         text2: authError,
       });
     }
@@ -102,7 +64,7 @@ export default function LoginScreen() {
   // Redirect if already authenticated
   useEffect(() => {
     if (userInfo) {
-      router.replace('/(tabs)');
+      router.replace("/(tabs)");
     }
   }, [userInfo]);
 
@@ -110,9 +72,9 @@ export default function LoginScreen() {
   const handleSignIn = async () => {
     if (!isFormValid) {
       Toast.show({
-        type: 'error',
-        text1: 'Validation Error',
-        text2: 'Please enter a valid email and password (min 8 characters)',
+        type: "error",
+        text1: "Validation Error",
+        text2: "Please enter a valid email and password (min 8 characters)",
       });
       return;
     }
@@ -121,40 +83,43 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      const { user } = await authService.signInWithEmailAndPassword(email, password);
+      const { user } = await authService.signInWithEmailAndPassword(
+        email,
+        password
+      );
 
       // Handle successful login
       Toast.show({
-        type: 'success',
-        text1: 'Welcome Back!',
+        type: "success",
+        text1: "Welcome Back!",
         text2: `Signed in as ${user.email}`,
       });
 
       // Navigate to the main app
-      router.replace('/(tabs)');
+      router.replace("/(tabs)");
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
 
-      let errorMessage = 'Failed to sign in. Please try again.';
+      let errorMessage = "Failed to sign in. Please try again.";
 
-      if (typeof error === 'object' && error !== null && 'code' in error) {
+      if (typeof error === "object" && error !== null && "code" in error) {
         const authError = error as AuthError;
         switch (authError.code) {
-          case 'auth/invalid-credentials':
-            errorMessage = 'Invalid email or password';
+          case "auth/invalid-credentials":
+            errorMessage = "Invalid email or password";
             break;
-          case 'auth/too-many-requests':
-            errorMessage = 'Too many login attempts. Please try again later.';
+          case "auth/too-many-requests":
+            errorMessage = "Too many login attempts. Please try again later.";
             break;
-          case 'auth/network-request-failed':
-            errorMessage = 'Network error. Please check your connection.';
+          case "auth/network-request-failed":
+            errorMessage = "Network error. Please check your connection.";
             break;
         }
       }
 
       Toast.show({
-        type: 'error',
-        text1: 'Login Failed',
+        type: "error",
+        text1: "Login Failed",
         text2: errorMessage,
       });
     } finally {
@@ -172,23 +137,23 @@ export default function LoginScreen() {
       // The success toast and navigation will be handled by the auth context
       // or by the useEffect that watches userInfo
 
-      throw new Error('No user data returned from Google');
+      throw new Error("No user data returned from Google");
     } catch (error) {
-      console.error('Google sign-in error:', error);
+      console.error("Google sign-in error:", error);
 
-      let errorMessage = 'Failed to sign in with Google. Please try again.';
+      let errorMessage = "Failed to sign in with Google. Please try again.";
 
       if (error instanceof Error) {
-        if (error.message.includes('canceled')) {
-          errorMessage = 'Google sign in was canceled';
-        } else if (error.message.includes('network')) {
-          errorMessage = 'Network error. Please check your connection.';
+        if (error.message.includes("canceled")) {
+          errorMessage = "Google sign in was canceled";
+        } else if (error.message.includes("network")) {
+          errorMessage = "Network error. Please check your connection.";
         }
       }
 
       Toast.show({
-        type: 'error',
-        text1: 'Google Sign In Failed',
+        type: "error",
+        text1: "Google Sign In Failed",
         text2: errorMessage,
       });
     }
@@ -196,20 +161,20 @@ export default function LoginScreen() {
 
   const handleSocialLogin = (provider: string) => {
     Toast.show({
-      type: 'info',
+      type: "info",
       text1: `${provider} Login`,
       text2: `${provider} authentication coming soon!`,
-      position: 'top',
+      position: "top",
       visibilityTime: 3000,
     });
   };
 
   const handleForgotPassword = () => {
     Toast.show({
-      type: 'info',
+      type: "info",
       text1: `Reset Password`,
       text2: `Reset Password functionality coming soon!`,
-      position: 'top',
+      position: "top",
       visibilityTime: 3000,
     });
   };
@@ -236,14 +201,18 @@ export default function LoginScreen() {
     },
     header: {
       height: verticalScale(150),
-      justifyContent: 'center',
-      alignItems: 'center',
-      overflow: 'hidden',
-      marginTop: Platform.OS === 'android' ? -(StatusBar.currentHeight || 0) : 0,
+      justifyContent: "center",
+      alignItems: "center",
+      overflow: "hidden",
+      marginTop:
+        Platform.OS === "android" ? -(StatusBar.currentHeight || 0) : 0,
     },
     themeToggle: {
-      position: 'absolute',
-      top: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + scale(10) : scale(40),
+      position: "absolute",
+      top:
+        Platform.OS === "android"
+          ? (StatusBar.currentHeight || 0) + scale(10)
+          : scale(40),
       right: scale(15),
       padding: scale(3),
       borderRadius: scale(10),
@@ -252,53 +221,54 @@ export default function LoginScreen() {
     },
     headerGradient: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      width: '100%',
+      justifyContent: "center",
+      alignItems: "center",
+      width: "100%",
     },
     safeArea: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      width: '100%',
+      justifyContent: "center",
+      alignItems: "center",
+      width: "100%",
     },
     waveContainer: {
-      width: '100%',
+      width: "100%",
       backgroundColor: colors.backgroundInverse,
       marginTop: -1,
     },
     logo: {
       width: scale(350),
+      marginTop: verticalScale(50),
     },
     formContainer: {
       paddingHorizontal: scale(24),
-      width: '100%',
-      alignItems: 'center',
+      width: "100%",
+      alignItems: "center",
     },
     welcomeSection: {
       marginTop: verticalScale(-40),
-      width: '80%',
+      width: "80%",
       borderRadius: scale(40),
       backgroundColor: colors.backgroundElevated,
       marginBottom: verticalScale(32),
-      alignItems: 'center',
+      alignItems: "center",
     },
     welcomeTitle: {
       fontSize: scale(24),
-      fontWeight: 'bold',
+      fontWeight: "bold",
       color: colors.text,
       marginBottom: verticalScale(5),
     },
     inputSection: {
-      width: '100%',
+      width: "100%",
       marginBottom: verticalScale(24),
     },
     inputContainer: {
       marginBottom: verticalScale(20),
     },
     inputWrapper: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       backgroundColor: colors.backgroundElevated,
       borderRadius: scale(12),
       paddingHorizontal: scale(12),
@@ -314,13 +284,13 @@ export default function LoginScreen() {
       paddingHorizontal: scale(12),
     },
     optionsRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
     },
     rememberMe: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
     },
     radioButton: {
       width: scale(18),
@@ -328,8 +298,8 @@ export default function LoginScreen() {
       borderRadius: scale(9),
       borderWidth: 1.5,
       borderColor: colors.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
       marginRight: scale(8),
     },
     radioInner: {
@@ -345,33 +315,33 @@ export default function LoginScreen() {
     forgotPassword: {
       fontSize: scale(14),
       color: colors.primary,
-      fontWeight: '500',
-      alignSelf: 'flex-end',
+      fontWeight: "500",
+      alignSelf: "flex-end",
       marginTop: verticalScale(10),
       marginBottom: verticalScale(20),
     },
     loginButton: {
       marginBottom: verticalScale(24),
       borderRadius: scale(24),
-      width: '90%',
-      overflow: 'hidden',
+      width: "90%",
+      overflow: "hidden",
     },
     loginButtonDisabled: {
       opacity: 0.6,
     },
     buttonGradient: {
       paddingVertical: verticalScale(16),
-      alignItems: 'center',
+      alignItems: "center",
       borderRadius: scale(12),
     },
     buttonText: {
-      color: colors.textInverse || '#fff',
+      color: colors.textInverse || "#fff",
       fontSize: scale(16),
-      fontWeight: '600',
+      fontWeight: "600",
     },
     signUpContainer: {
-      flexDirection: 'row',
-      justifyContent: 'center',
+      flexDirection: "row",
+      justifyContent: "center",
       marginTop: verticalScale(16),
     },
     signUpText: {
@@ -381,89 +351,74 @@ export default function LoginScreen() {
     signUpLink: {
       fontSize: scale(14),
       color: colors.primary,
-      fontWeight: '600',
+      fontWeight: "600",
       marginLeft: scale(4),
-    },
-    googleButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: commonColors.googleButtonBg,
-      borderWidth: 1,
-      borderColor: commonColors.googleButtonBorder,
-      padding: 14,
-      borderRadius: 8,
     },
     googleIcon: {
       width: 24,
       height: 24,
       marginRight: 12,
     },
-    googleButtonText: {
-      color: commonColors.googleButtonText,
-      fontSize: 16,
-      fontWeight: '500',
-    },
     footer: {
       marginTop: 24,
-      alignItems: 'center',
+      alignItems: "center",
     },
     footerText: {
       color: colors.primary,
       fontSize: 14,
-      fontWeight: '500',
+      fontWeight: "500",
     },
     checkmark: {
       width: scale(20),
       height: scale(20),
       borderRadius: 10,
       backgroundColor: colors.success,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
     },
     checkmarkIcon: {
-      color: commonColors.white,
+      color: colors.primary,
     },
     divider: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       marginVertical: verticalScale(24),
     },
     dividerLine: {
       flex: 1,
       height: 1,
-      backgroundColor: '#E9ECEF',
+      backgroundColor: "#E9ECEF",
     },
     dividerText: {
       marginHorizontal: 16,
       fontSize: 14,
-      color: '#8E8E93',
-      fontWeight: '500',
+      color: "#8E8E93",
+      fontWeight: "500",
     },
     socialSection: {
-      alignItems: 'center',
+      alignItems: "center",
     },
     socialTitle: {
       fontSize: 14,
-      color: '#8E8E93',
+      color: "#8E8E93",
       marginBottom: 16,
     },
     socialIcons: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      justifyContent: "space-between",
       paddingHorizontal: 5,
       marginTop: 10,
-      width: '100%',
+      width: "100%",
     },
     socialIcon: {
       width: scale(44),
       height: scale(44),
       borderRadius: scale(22),
-      backgroundColor: '#F5F5F5',
-      justifyContent: 'center',
-      alignItems: 'center',
+      backgroundColor: "#F5F5F5",
+      justifyContent: "center",
+      alignItems: "center",
       borderWidth: 1,
-      borderColor: '#E0E0E0',
+      borderColor: "#E0E0E0",
       marginHorizontal: 2,
     },
     socialIconDisabled: {
@@ -474,13 +429,15 @@ export default function LoginScreen() {
   return (
     <Screen backgroundColor={colors.background}>
       <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
         translucent={false}
       />
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : StatusBar.currentHeight}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={
+          Platform.OS === "ios" ? 0 : StatusBar.currentHeight
+        }
       >
         <ScrollView
           contentContainerStyle={styles.contentContainer}
@@ -499,13 +456,13 @@ export default function LoginScreen() {
                   accessibilityLabel="Toggle dark/light mode"
                 >
                   <MaterialCommunityIcons
-                    name={isDarkMode ? 'weather-sunny' : 'weather-night'}
+                    name={isDarkMode ? "weather-sunny" : "weather-night"}
                     size={scale(16)}
                     color={colors.primary}
                   />
                 </TouchableOpacity>
                 <Image
-                  source={require('@/assets/images/logo.png')}
+                  source={require("@/assets/images/logo.png")}
                   style={styles.logo}
                   resizeMode="contain"
                 />
@@ -528,7 +485,6 @@ export default function LoginScreen() {
             <View style={styles.welcomeSection}>
               <Text style={styles.welcomeTitle}>Welcome back!</Text>
             </View>
-
             {/* Input Fields */}
             <View style={styles.inputSection}>
               {/* Email Input */}
@@ -536,12 +492,24 @@ export default function LoginScreen() {
                 <View style={styles.inputWrapper}>
                   <View style={{ flex: 1 }}>
                     <TextInput
-                      leftIcon={<MaterialCommunityIcons name="email-outline" size={20} color={colors.textSecondary} />}
-                      rightIcon={email.trim() ? (
-                        <View style={styles.checkmark}>
-                          <FontAwesome name="check" size={12} style={styles.checkmarkIcon} />
-                        </View>
-                      ) : undefined}
+                      leftIcon={
+                        <MaterialCommunityIcons
+                          name="email-outline"
+                          size={20}
+                          color={colors.textSecondary}
+                        />
+                      }
+                      rightIcon={
+                        email.trim() ? (
+                          <View style={styles.checkmark}>
+                            <FontAwesome
+                              name="check"
+                              size={12}
+                              style={styles.checkmarkIcon}
+                            />
+                          </View>
+                        ) : undefined
+                      }
                       value={email}
                       onChangeText={setEmail}
                       placeholder="Username"
@@ -558,7 +526,13 @@ export default function LoginScreen() {
                 <View style={styles.inputWrapper}>
                   <View style={{ flex: 1 }}>
                     <TextInput
-                      leftIcon={<MaterialCommunityIcons name="lock-outline" size={20} color={colors.textSecondary} />}
+                      leftIcon={
+                        <MaterialCommunityIcons
+                          name="lock-outline"
+                          size={20}
+                          color={colors.textSecondary}
+                        />
+                      }
                       value={password}
                       onChangeText={setPassword}
                       placeholder="Password"
@@ -571,7 +545,7 @@ export default function LoginScreen() {
                     onPress={() => setShowPassword(!showPassword)}
                   >
                     <MaterialCommunityIcons
-                      name={showPassword ? 'eye-off' : 'eye'}
+                      name={showPassword ? "eye-off" : "eye"}
                       size={scale(20)}
                       color={colors.textSecondary}
                       style={{ paddingLeft: scale(8) }}
@@ -594,7 +568,6 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </View>
             </View>
-
             {/* Login Button */}
             <TouchableOpacity
               onPress={handleSignIn}
@@ -613,15 +586,22 @@ export default function LoginScreen() {
                 ]}
               >
                 <Text style={styles.buttonText}>
-                  {isLoading ? 'Signing in...' : 'Sign In'}
+                  {isLoading ? "Signing in..." : "Sign In"}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
-
             {/* New User Link */}
             <View style={styles.signUpContainer}>
               <Text style={styles.signUpText}>New user? </Text>
-              <TouchableOpacity onPress={() => Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Sign up functionality' })}>
+              <TouchableOpacity
+                onPress={() =>
+                  Toast.show({
+                    type: "info",
+                    text1: "Coming Soon",
+                    text2: "Sign up functionality",
+                  })
+                }
+              >
                 <Text style={styles.signUpLink}>Sign Up</Text>
               </TouchableOpacity>
             </View>
@@ -632,12 +612,15 @@ export default function LoginScreen() {
             </View>
             {/* Social Login */}
             <View style={styles.socialSection}>
-              <Text style={styles.socialTitle}>Sign in with another account</Text>
+              <Text style={styles.socialTitle}>
+                Sign in with another account
+              </Text>
               <View style={styles.socialIcons}>
                 <TouchableOpacity
                   style={[
                     styles.socialIcon,
-                    (isGoogleAuthLoading || isLoading) && styles.socialIconDisabled
+                    (isGoogleAuthLoading || isLoading) &&
+                      styles.socialIconDisabled,
                   ]}
                   onPress={() => handleGoogleSignIn()}
                   disabled={isGoogleAuthLoading || isLoading}
@@ -645,41 +628,62 @@ export default function LoginScreen() {
                   {isGoogleAuthLoading ? (
                     <ActivityIndicator size="small" color={colors.primary} />
                   ) : (
-                    <FontAwesome name="google" size={20} color={colors.primary} />
+                    <FontAwesome
+                      name="google"
+                      size={20}
+                      color={colors.primary}
+                    />
                   )}
                 </TouchableOpacity>
 
-                {Platform.OS === 'ios' && (
+                {Platform.OS === "ios" && (
                   <TouchableOpacity
                     style={styles.socialIcon}
-                    onPress={() => handleSocialLogin('Apple')}
+                    onPress={() => handleSocialLogin("Apple")}
                   >
-                    <FontAwesome name="apple" size={20} color={colors.textSecondary} />
+                    <FontAwesome
+                      name="apple"
+                      size={20}
+                      color={colors.textSecondary}
+                    />
                   </TouchableOpacity>
                 )}
 
                 <TouchableOpacity
                   style={styles.socialIcon}
-                  onPress={() => handleSocialLogin('LinkedIn')}
+                  onPress={() => handleSocialLogin("LinkedIn")}
                 >
-                  <FontAwesome name="linkedin" size={20} color={colors.textSecondary} />
+                  <FontAwesome
+                    name="linkedin"
+                    size={20}
+                    color={colors.textSecondary}
+                  />
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.socialIcon}
-                  onPress={() => handleSocialLogin('Facebook')}
+                  onPress={() => handleSocialLogin("Facebook")}
                 >
-                  <FontAwesome name="facebook" size={20} color={colors.textSecondary} />
+                  <FontAwesome
+                    name="facebook"
+                    size={20}
+                    color={colors.textSecondary}
+                  />
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.socialIcon}
-                  onPress={() => handleSocialLogin('X')}
+                  onPress={() => handleSocialLogin("X")}
                 >
-                  <FontAwesome name="twitter" size={20} color={colors.textSecondary} />
+                  <FontAwesome
+                    name="twitter"
+                    size={20}
+                    color={colors.textSecondary}
+                  />
                 </TouchableOpacity>
               </View>
-            </View>          </View>
+            </View>{" "}
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
       <Toast />
